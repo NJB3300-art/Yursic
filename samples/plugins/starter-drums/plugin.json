@@ -1,0 +1,11 @@
+{
+  "id": "samples.starter-drums",
+  "name": "Starter Drums",
+  "version": "1.0.0",
+  "author": "Yursic samples",
+  "description": "Example sound pack with one drum loop.",
+  "category": "Drums",
+  "sounds": [
+    { "file": "loops/house-loop-124.wav", "name": "House Loop", "category": "Drums", "bpm": 124 }
+  ]
+}

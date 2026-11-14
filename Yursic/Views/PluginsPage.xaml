@@ -1,0 +1,100 @@
+<Page
+    x:Class="Yursic.Views.PluginsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="Transparent">
+
+    <Page.Resources>
+        <DataTemplate x:Key="PluginTemplate">
+            <Grid Padding="4,10" ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Border Width="48" Height="48" CornerRadius="10" Background="{StaticResource YAccent}">
+                    <FontIcon Glyph="&#xEA86;" FontSize="22" />
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="SemiBold" />
+                    <TextBlock Foreground="{StaticResource YTextDim}" FontSize="13">
+                        <Run Text="{Binding Kind}" /><Run Text=" · " /><Run Text="{Binding Summary}" /><Run Text=" · " /><Run Text="{Binding Byline}" />
+                    </TextBlock>
+                    <TextBlock Text="{Binding Description}" Foreground="{StaticResource YTextDim}" FontSize="13" TextWrapping="Wrap" MaxLines="2" />
+                </StackPanel>
+                <Button Grid.Column="2" Content="Remove" Tag="{Binding}" Click="Uninstall_Click" Style="{StaticResource PillButton}" />
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="BuiltInTemplate">
+            <StackPanel Padding="4,6">
+                <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Summary}" Foreground="{StaticResource YTextDim}" FontSize="12" />
+            </StackPanel>
+        </DataTemplate>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="1100" HorizontalAlignment="Left">
+            <TextBlock Text="Plugins" Style="{StaticResource PageTitle}" />
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Install from USB" Style="{StaticResource SectionTitle}" />
+                    <TextBlock Style="{StaticResource DimText}" Margin="0,0,0,12"
+                               Text="Plug in a USB drive with .yplug files (or plugin folders) in its root or in Yursic\Plugins, then scan. Installed plugins stay on the console, so you can unplug the drive afterwards." />
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="ScanButton" Style="{StaticResource AccentPillButton}" Click="Scan_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <FontIcon Glyph="&#xE88E;" FontSize="16" />
+                                <TextBlock Text="Scan USB drives" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource PillButton}" Click="InstallAll_Click" x:Name="InstallAllButton" Visibility="Collapsed" Content="Install all" />
+                        <ProgressRing x:Name="Working" Width="24" Height="24" Margin="12,0" />
+                        <TextBlock x:Name="ScanStatus" VerticalAlignment="Center" Style="{StaticResource DimText}" />
+                    </StackPanel>
+                    <ListView x:Name="Candidates" Margin="0,12,0,0" SelectionMode="None" IsItemClickEnabled="True"
+                              ItemClick="Candidate_ItemClick" ItemTemplate="{StaticResource EntryTemplate}" MaxHeight="320" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Installed" Style="{StaticResource SectionTitle}" />
+                    <ListView x:Name="InstalledList" SelectionMode="None" ItemTemplate="{StaticResource PluginTemplate}" />
+                    <TextBlock x:Name="NoneInstalled" Style="{StaticResource DimText}" Text="No plugins installed yet." />
+                    <TextBlock x:Name="LoadErrors" Foreground="{StaticResource YRecord}" TextWrapping="Wrap" FontSize="13" Margin="0,8,0,0" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Built-in effects" Style="{StaticResource SectionTitle}" />
+                    <GridView x:Name="BuiltInList" SelectionMode="None" ItemTemplate="{StaticResource BuiltInTemplate}" IsTabStop="False">
+                        <GridView.ItemContainerStyle>
+                            <Style TargetType="GridViewItem">
+                                <Setter Property="Width" Value="240" />
+                                <Setter Property="HorizontalContentAlignment" Value="Left" />
+                            </Style>
+                        </GridView.ItemContainerStyle>
+                    </GridView>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Make your own" Style="{StaticResource SectionTitle}" />
+                    <TextBlock Style="{StaticResource DimText}" Margin="0,0,0,10"
+                               Text="A plugin is a folder (or a .yplug zip of it) with a plugin.json. Effects chain Yursic's DSP blocks with your own controls; sound packs list WAV loops. Xbox doesn't allow apps to load VST/DLL code, so plugins describe sound rather than run code." />
+                    <Border Background="{StaticResource YBg}" CornerRadius="8" Padding="14">
+                        <TextBlock FontFamily="Consolas" FontSize="13" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                   Text="{x:Bind ExampleJson}" />
+                    </Border>
+                    <TextBlock Style="{StaticResource DimText}" Margin="0,10,0,0"
+                               Text="Blocks: gain, lowpass, highpass, bandpass, peak, lowshelf, highshelf, delay, distortion, bitcrush, compressor, reverb, chorus, tremolo, width. Full reference: docs/PLUGIN_FORMAT.md in the source repo." />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

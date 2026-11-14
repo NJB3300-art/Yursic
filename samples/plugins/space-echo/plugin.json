@@ -1,0 +1,17 @@
+{
+  "id": "samples.space-echo",
+  "name": "Space Echo",
+  "version": "1.0.0",
+  "author": "Yursic samples",
+  "description": "Dark tape-style echo that melts into a big reverb.",
+  "category": "Delay",
+  "params": [
+    { "id": "time", "name": "Time", "min": 50, "max": 1200, "default": 400, "unit": "ms", "curve": "log" },
+    { "id": "feedback", "name": "Repeats", "min": 0, "max": 0.9, "default": 0.55, "unit": "%" },
+    { "id": "mix", "name": "Mix", "min": 0, "max": 1, "default": 0.35, "unit": "%" }
+  ],
+  "chain": [
+    { "node": "delay", "time": "$time", "feedback": "$feedback", "tone": 3500, "mix": "$mix" },
+    { "node": "reverb", "size": 0.75, "damp": 0.5, "mix": "$mix*0.5" }
+  ]
+}

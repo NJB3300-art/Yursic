@@ -1,0 +1,20 @@
+{
+  "id": "samples.vocal-chain",
+  "name": "Vocal Chain",
+  "version": "1.0.0",
+  "author": "Yursic samples",
+  "description": "One-knob vocal polish: rumble cut, compression, presence and a touch of room.",
+  "category": "Vocals",
+  "params": [
+    { "id": "amount", "name": "Amount", "min": 0, "max": 1, "default": 0.5, "unit": "%" },
+    { "id": "air", "name": "Air", "min": 0, "max": 9, "default": 3, "unit": "dB" },
+    { "id": "room", "name": "Room", "min": 0, "max": 0.5, "default": 0.15, "unit": "%" }
+  ],
+  "chain": [
+    { "node": "highpass", "freq": 90, "q": 0.7 },
+    { "node": "compressor", "threshold": "$amount*-24-6", "ratio": 3.5, "attack": 8, "release": 140, "makeup": "$amount*8+1" },
+    { "node": "peak", "freq": 3200, "q": 1.1, "gain": "$amount*3" },
+    { "node": "highshelf", "freq": 9000, "gain": "$air" },
+    { "node": "reverb", "size": 0.35, "damp": 0.6, "predelay": 20, "mix": "$room" }
+  ]
+}

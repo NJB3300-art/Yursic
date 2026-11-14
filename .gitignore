@@ -1,0 +1,21 @@
+## Visual Studio / UWP
+.vs/
+bin/
+obj/
+AppPackages/
+BundleArtifacts/
+Package.StoreAssociation.xml
+*.user
+*.suo
+*.pfx
+*.appx
+*.appxbundle
+*.msix
+*.msixbundle
+project.lock.json
+*.nuget.props
+*.nuget.targets
+
+## Tools output
+*.yplug
+__pycache__/

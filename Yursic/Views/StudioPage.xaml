@@ -1,0 +1,405 @@
+<Page
+    x:Class="Yursic.Views.StudioPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:h="using:Yursic.Helpers"
+    Background="{StaticResource YBg}"
+    PreviewKeyDown="Page_PreviewKeyDown">
+
+    <Page.Resources>
+        <h:SelectedBrushConverter x:Key="SelBrush" Selected="{StaticResource YSurface2}" Normal="{StaticResource YSurface}" />
+        <h:BoolToVisibilityConverter x:Key="BoolVis" />
+        <h:GainToDbConverter x:Key="GainDb" />
+        <h:PanToTextConverter x:Key="PanText" />
+
+        <!-- Track header (left column) -->
+        <DataTemplate x:Key="TrackHeaderTemplate">
+            <Grid Height="100" Margin="0,0,0,2" Background="{Binding IsSelected, Converter={StaticResource SelBrush}}" CornerRadius="8,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="6" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Rectangle Fill="{Binding Brush}" />
+                <StackPanel Grid.Column="1" Padding="10,6,10,6" Spacing="4">
+                    <Button Content="{Binding Name}" Tag="{Binding}" Click="TrackName_Click"
+                            Background="Transparent" Padding="4,2" FontWeight="SemiBold" FontSize="15"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
+                        <Button.ContextFlyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Text="Rename" Icon="Rename" Tag="{Binding}" Click="TrackRename_Click" />
+                                <MenuFlyoutItem Text="Change color" Tag="{Binding}" Click="TrackColor_Click">
+                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE790;" /></MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutItem Text="Effects" Tag="{Binding}" Click="TrackEffects_Click">
+                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE9E9;" /></MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutSeparator />
+                                <MenuFlyoutItem Text="Delete track" Icon="Delete" Tag="{Binding}" Click="TrackDelete_Click" />
+                            </MenuFlyout>
+                        </Button.ContextFlyout>
+                    </Button>
+                    <StackPanel Orientation="Horizontal">
+                        <ToggleButton Content="M" IsChecked="{Binding Mute, Mode=TwoWay}" Style="{StaticResource SmallToggle}" ToolTipService.ToolTip="Mute" />
+                        <ToggleButton Content="S" IsChecked="{Binding Solo, Mode=TwoWay}" Style="{StaticResource SmallToggle}" ToolTipService.ToolTip="Solo" />
+                        <ToggleButton IsChecked="{Binding Armed, Mode=TwoWay}" Style="{StaticResource SmallToggle}" ToolTipService.ToolTip="Arm for recording" Tag="{Binding}" Checked="Arm_Checked">
+                            <Ellipse Width="12" Height="12" Fill="{StaticResource YRecord}" />
+                        </ToggleButton>
+                    </StackPanel>
+                    <Grid>
+                        <Slider Minimum="0" Maximum="1.2" StepFrequency="0.01" Value="{Binding Volume, Mode=TwoWay}" Margin="0,-6,0,-6" ToolTipService.ToolTip="Volume" />
+                    </Grid>
+                    <Grid Height="3" Background="{StaticResource YLine}" CornerRadius="2">
+                        <Rectangle Fill="{StaticResource YAccent2}" HorizontalAlignment="Stretch" RenderTransformOrigin="0,0.5">
+                            <Rectangle.RenderTransform>
+                                <ScaleTransform ScaleX="{Binding MeterValue}" />
+                            </Rectangle.RenderTransform>
+                        </Rectangle>
+                    </Grid>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Mixer channel strip -->
+        <DataTemplate x:Key="ChannelTemplate">
+            <Grid Width="110" Margin="0,0,8,0" Padding="8" CornerRadius="8" Background="{Binding IsSelected, Converter={StaticResource SelBrush}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Rectangle Height="4" Fill="{Binding Brush}" RadiusX="2" RadiusY="2" Margin="0,0,0,6" />
+                <TextBlock Grid.Row="1" Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" />
+                <Grid Grid.Row="2" HorizontalAlignment="Center" Margin="0,6" ColumnSpacing="6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="6" />
+                    </Grid.ColumnDefinitions>
+                    <Slider Orientation="Vertical" Minimum="0" Maximum="1.2" StepFrequency="0.01" Value="{Binding Volume, Mode=TwoWay}" Height="120" />
+                    <Grid Grid.Column="1" Background="{StaticResource YLine}" CornerRadius="3">
+                        <Rectangle Fill="{StaticResource YAccent2}" RenderTransformOrigin="0.5,1">
+                            <Rectangle.RenderTransform>
+                                <ScaleTransform ScaleY="{Binding MeterValue}" />
+                            </Rectangle.RenderTransform>
+                        </Rectangle>
+                    </Grid>
+                </Grid>
+                <TextBlock Grid.Row="3" Text="{Binding Volume, Converter={StaticResource GainDb}}" FontSize="12" Foreground="{StaticResource YTextDim}" HorizontalAlignment="Center" />
+                <StackPanel Grid.Row="4" Spacing="2">
+                    <Slider Minimum="-1" Maximum="1" StepFrequency="0.02" Value="{Binding Pan, Mode=TwoWay}" ToolTipService.ToolTip="Pan" Margin="0,-4" />
+                    <TextBlock Text="{Binding Pan, Converter={StaticResource PanText}}" FontSize="12" Foreground="{StaticResource YTextDim}" HorizontalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <ToggleButton Content="M" IsChecked="{Binding Mute, Mode=TwoWay}" Style="{StaticResource SmallToggle}" />
+                        <ToggleButton Content="S" IsChecked="{Binding Solo, Mode=TwoWay}" Style="{StaticResource SmallToggle}" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+        <!-- One effect card in the selected track's chain -->
+        <DataTemplate x:Key="EffectTemplate">
+            <Grid Width="300" Margin="0,0,12,0" Padding="14" CornerRadius="10" Background="{StaticResource YSurface2}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ToggleButton IsChecked="{Binding Enabled, Mode=TwoWay}" Style="{StaticResource SmallToggle}" Width="44" Content="ON" ToolTipService.ToolTip="Bypass" />
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center" Margin="10,0" TextTrimming="CharacterEllipsis" />
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button Tag="{Binding}" Click="FxLeft_Click" Padding="8,4" Background="Transparent" ToolTipService.ToolTip="Move earlier">
+                            <FontIcon Glyph="&#xE76B;" FontSize="12" />
+                        </Button>
+                        <Button Tag="{Binding}" Click="FxRight_Click" Padding="8,4" Background="Transparent" ToolTipService.ToolTip="Move later">
+                            <FontIcon Glyph="&#xE76C;" FontSize="12" />
+                        </Button>
+                        <Button Tag="{Binding}" Click="FxRemove_Click" Padding="8,4" Background="Transparent" ToolTipService.ToolTip="Remove">
+                            <FontIcon Glyph="&#xE711;" FontSize="12" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+                <ScrollViewer Grid.Row="1" Margin="0,8,0,0" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Controls}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,4">
+                                    <Grid>
+                                        <TextBlock Text="{Binding Name}" FontSize="13" />
+                                        <TextBlock Text="{Binding Display}" FontSize="13" Foreground="{StaticResource YTextDim}" HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <Slider Minimum="0" Maximum="1000" StepFrequency="1" SmallChange="20" LargeChange="100"
+                                            Value="{Binding SliderValue, Mode=TwoWay}" IsThumbToolTipEnabled="False" Margin="0,-6,0,-6" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="SoundTemplate">
+            <Grid Padding="4,8" ColumnSpacing="14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Width="40" Height="40" CornerRadius="8" Background="{StaticResource YAccent}">
+                    <FontIcon Glyph="&#xE8D6;" FontSize="18" />
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name}" FontSize="15" />
+                    <TextBlock Text="{Binding Subtitle}" FontSize="12" Foreground="{StaticResource YTextDim}" />
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+    </Page.Resources>
+
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="76" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ===== Top bar: project + transport ===== -->
+        <Grid Background="{StaticResource YSurface}" Padding="12,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                <Button Style="{StaticResource TransportButton}" Content="&#xE72B;" Click="Back_Click" ToolTipService.ToolTip="Back to projects" Background="Transparent" />
+                <Button x:Name="ProjectNameButton" Click="ProjectName_Click" Background="Transparent" FontSize="18" FontWeight="SemiBold" Padding="8,4" />
+                <TextBlock x:Name="SavedText" VerticalAlignment="Center" Style="{StaticResource DimText}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Style="{StaticResource TransportButton}" Content="&#xE892;" Click="ToStart_Click" ToolTipService.ToolTip="Go to start" />
+                <Button Style="{StaticResource TransportButton}" Content="&#xEB9E;" Click="BarBack_Click" ToolTipService.ToolTip="Back one bar (LB)" />
+                <Button x:Name="PlayButton" Style="{StaticResource TransportButton}" Content="&#xE768;" Click="Play_Click"
+                        Width="64" Height="64" CornerRadius="32" Background="{StaticResource YAccent}" Foreground="White" ToolTipService.ToolTip="Play / pause (X)" />
+                <Button x:Name="RecordButton" Style="{StaticResource TransportButton}" Click="Record_Click" ToolTipService.ToolTip="Record (Y)">
+                    <Ellipse x:Name="RecordDot" Width="20" Height="20" Fill="{StaticResource YRecord}" />
+                </Button>
+                <Button Style="{StaticResource TransportButton}" Content="&#xEB9D;" Click="BarForward_Click" ToolTipService.ToolTip="Forward one bar (RB)" />
+
+                <Border Background="{StaticResource YBg}" CornerRadius="10" Padding="16,6" Margin="16,0,8,0" MinWidth="170">
+                    <StackPanel>
+                        <TextBlock x:Name="TimeText" Text="00:00.0" FontFamily="Consolas" FontSize="26" HorizontalAlignment="Center" />
+                        <TextBlock x:Name="BarText" Text="Bar 1.1" FontSize="12" Foreground="{StaticResource YTextDim}" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <Button x:Name="BpmButton" Style="{StaticResource PillButton}" ToolTipService.ToolTip="Tempo">
+                    <Button.Flyout>
+                        <Flyout>
+                            <StackPanel Width="280" Spacing="8">
+                                <TextBlock Text="Tempo" FontWeight="SemiBold" />
+                                <Slider x:Name="BpmSlider" Minimum="40" Maximum="240" StepFrequency="1" ValueChanged="BpmSlider_ValueChanged" />
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                    <Button Content="−1" Click="BpmDown_Click" Width="60" />
+                                    <Button Content="+1" Click="BpmUp_Click" Width="60" />
+                                </StackPanel>
+                                <TextBlock Text="Changing the tempo moves the grid and metronome. Audio clips keep their speed." Style="{StaticResource DimText}" FontSize="12" />
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+                <ToggleButton x:Name="MetronomeToggle" Height="44" CornerRadius="22" Padding="14,0" Margin="4" Checked="Metronome_Changed" Unchecked="Metronome_Changed" ToolTipService.ToolTip="Metronome">
+                    <FontIcon Glyph="&#xEC4A;" FontSize="18" />
+                </ToggleButton>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button Style="{StaticResource TransportButton}" Content="&#xE71F;" Click="ZoomOut_Click" ToolTipService.ToolTip="Zoom out (LT)" />
+                <Button Style="{StaticResource TransportButton}" Content="&#xE8A3;" Click="ZoomIn_Click" ToolTipService.ToolTip="Zoom in (RT)" />
+                <Button Style="{StaticResource TransportButton}" Content="&#xE7A7;" Click="Undo_Click" ToolTipService.ToolTip="Undo" />
+                <Button Style="{StaticResource PillButton}" Click="Save_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE74E;" FontSize="16" />
+                        <TextBlock Text="Save" />
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource AccentPillButton}" Click="Export_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE898;" FontSize="16" />
+                        <TextBlock Text="Export" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- ===== Tracks + timeline ===== -->
+        <Grid Grid.Row="1" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="32" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Button Click="AddTrack_Click" Height="30" Padding="10,0" Background="Transparent" HorizontalAlignment="Left" ToolTipService.ToolTip="Add track">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon Glyph="&#xE710;" FontSize="12" />
+                    <TextBlock Text="Add track" FontSize="13" />
+                </StackPanel>
+            </Button>
+
+            <!-- Ruler (scrolls horizontally with the lanes) -->
+            <ScrollViewer x:Name="RulerScroll" Grid.Column="1" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Hidden"
+                          VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled" IsTabStop="False">
+                <Canvas x:Name="Ruler" Height="32" Background="{StaticResource YSurface}" Tapped="Ruler_Tapped" />
+            </ScrollViewer>
+
+            <!-- Headers and lanes share one vertical scroller -->
+            <ScrollViewer x:Name="VScroll" Grid.Row="1" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="250" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ItemsControl x:Name="TrackHeaders" ItemTemplate="{StaticResource TrackHeaderTemplate}" IsTabStop="False" />
+                    <ScrollViewer x:Name="HScroll" Grid.Column="1" HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Enabled"
+                                  VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled" ViewChanged="HScroll_ViewChanged" IsTabStop="False">
+                        <Grid>
+                            <Canvas x:Name="GridLines" />
+                            <StackPanel x:Name="Lanes" VerticalAlignment="Top" Tapped="Lanes_Tapped" />
+                            <Canvas x:Name="Overlay" IsHitTestVisible="False">
+                                <Rectangle x:Name="Playhead" Width="2" Fill="White" />
+                            </Canvas>
+                        </Grid>
+                    </ScrollViewer>
+                </Grid>
+            </ScrollViewer>
+
+            <TextBlock x:Name="HintText" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Style="{StaticResource DimText}" FontSize="16" TextAlignment="Center" IsHitTestVisible="False"
+                       Text="Open Sounds below to drop in a loop, or arm a track and press Record." />
+        </Grid>
+
+        <!-- ===== Status line ===== -->
+        <Grid Grid.Row="2" Padding="12,4">
+            <TextBlock x:Name="StatusText" Style="{StaticResource DimText}" />
+            <TextBlock x:Name="ControlsHint" HorizontalAlignment="Right" Style="{StaticResource DimText}" FontSize="12"
+                       Text="Ⓧ Play   Ⓨ Record   LB/RB Bar   LT/RT Zoom   ☰ Clip menu   View: switch panel" />
+        </Grid>
+
+        <!-- ===== Bottom panel: Mixer / Effects / Sounds ===== -->
+        <Grid Grid.Row="3" Height="300" Background="{StaticResource YSurface}" CornerRadius="12,12,0,0" Padding="16,8,16,12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <RadioButton x:Name="TabMixer" Content="Mixer" GroupName="Panel" Style="{StaticResource TabRadio}" Checked="Tab_Checked" />
+                <RadioButton x:Name="TabEffects" Content="Effects" GroupName="Panel" Style="{StaticResource TabRadio}" Checked="Tab_Checked" />
+                <RadioButton x:Name="TabSounds" Content="Sounds" GroupName="Panel" Style="{StaticResource TabRadio}" Checked="Tab_Checked" IsChecked="True" />
+                <TextBlock x:Name="PanelInfo" VerticalAlignment="Center" Margin="16,0" Style="{StaticResource DimText}" />
+            </StackPanel>
+
+            <!-- Mixer -->
+            <ScrollViewer x:Name="MixerPanel" Grid.Row="1" Margin="0,10,0,0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                          HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled" Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal">
+                    <ItemsControl x:Name="MixerStrips" ItemTemplate="{StaticResource ChannelTemplate}" IsTabStop="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                    <Grid Width="110" Padding="8" CornerRadius="8" Background="{StaticResource YSurface2}" BorderBrush="{StaticResource YAccent}" BorderThickness="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="Master" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        <Grid Grid.Row="1" HorizontalAlignment="Center" Margin="0,8" ColumnSpacing="6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="6" />
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="MasterSlider" Orientation="Vertical" Minimum="0" Maximum="1.2" StepFrequency="0.01" Height="150" ValueChanged="Master_ValueChanged" />
+                            <Grid Grid.Column="1" Background="{StaticResource YLine}" CornerRadius="3">
+                                <Rectangle Fill="{StaticResource YAccent2}" RenderTransformOrigin="0.5,1">
+                                    <Rectangle.RenderTransform>
+                                        <ScaleTransform x:Name="MasterMeterScale" ScaleY="0" />
+                                    </Rectangle.RenderTransform>
+                                </Rectangle>
+                            </Grid>
+                        </Grid>
+                        <TextBlock x:Name="MasterDb" Grid.Row="2" FontSize="12" Foreground="{StaticResource YTextDim}" HorizontalAlignment="Center" />
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Effects -->
+            <Grid x:Name="EffectsPanel" Grid.Row="1" Margin="0,10,0,0" Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Button x:Name="AddEffectButton" Width="140" VerticalAlignment="Stretch" Margin="0,0,12,0" CornerRadius="10"
+                        BorderBrush="{StaticResource YLine}" BorderThickness="2" Background="Transparent">
+                    <StackPanel Spacing="6">
+                        <FontIcon Glyph="&#xE710;" FontSize="22" />
+                        <TextBlock Text="Add effect" HorizontalAlignment="Center" />
+                    </StackPanel>
+                    <Button.Flyout>
+                        <MenuFlyout x:Name="AddEffectMenu" Placement="Top" />
+                    </Button.Flyout>
+                </Button>
+                <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                              HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled">
+                    <ItemsControl x:Name="EffectsList" ItemTemplate="{StaticResource EffectTemplate}" IsTabStop="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- Sounds -->
+            <Grid x:Name="SoundsPanel" Grid.Row="1" Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="200" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Spacing="6">
+                    <RadioButton x:Name="SrcLibrary" Content="Library" GroupName="Src" IsChecked="True" Checked="Source_Checked" />
+                    <RadioButton x:Name="SrcUsb" Content="USB drive" GroupName="Src" Checked="Source_Checked" />
+                    <TextBlock Text="Choose a sound to add it to the selected track at the playhead." Style="{StaticResource DimText}" FontSize="12" Margin="0,8,0,0" />
+                </StackPanel>
+                <GridView x:Name="SoundsList" Grid.Column="1" ItemTemplate="{StaticResource SoundTemplate}" IsItemClickEnabled="True"
+                          SelectionMode="None" ItemClick="Sound_ItemClick">
+                    <GridView.ItemContainerStyle>
+                        <Style TargetType="GridViewItem">
+                            <Setter Property="Width" Value="280" />
+                            <Setter Property="Margin" Value="0,0,8,8" />
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        </Style>
+                    </GridView.ItemContainerStyle>
+                </GridView>
+                <TextBlock x:Name="SoundsEmpty" Grid.Column="1" Style="{StaticResource DimText}" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed" />
+            </Grid>
+        </Grid>
+
+        <!-- Busy overlay -->
+        <Grid x:Name="Busy" Grid.RowSpan="4" Background="#CC000000" Visibility="Collapsed">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
+                <ProgressRing IsActive="True" Width="60" Height="60" />
+                <TextBlock x:Name="BusyText" FontSize="18" HorizontalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

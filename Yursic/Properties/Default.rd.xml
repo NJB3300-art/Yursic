@@ -1,0 +1,11 @@
+<!-- .NET Native runtime directives. Project/model types are serialized with DataContractJsonSerializer. -->
+<Directives xmlns="http://schemas.microsoft.com/netfx/2013/01/metadata">
+  <Application>
+    <Assembly Name="*Application*" Dynamic="Required All" />
+    <Type Name="Yursic.Models.ProjectFile" Serialize="Required All" />
+    <Type Name="Yursic.Models.TrackFile" Serialize="Required All" />
+    <Type Name="Yursic.Models.ClipFile" Serialize="Required All" />
+    <Type Name="Yursic.Models.EffectFile" Serialize="Required All" />
+    <Type Name="Yursic.Models.ParamValueFile" Serialize="Required All" />
+  </Application>
+</Directives>
