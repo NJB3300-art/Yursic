@@ -9,6 +9,26 @@ It adds two things consoles usually lack:
 - **Plugins from USB.** Copy `.yplug` files to a USB drive, scan, install. Effects and sound packs ([format](docs/PLUGIN_FORMAT.md)).
 - **USB storage management.** See drive space, browse/delete files, set up a `Yursic` folder layout, back up projects, import audio, and copy mixdowns off the console.
 
+## Web version
+
+**Play it in a browser: https://njb3300-art.github.io/Yursic/**
+
+`web/index.html` is the same studio rebuilt on the Web Audio API, in a single file with no build step
+and no dependencies. It works with mouse, touch, keyboard and game controllers (including Edge on Xbox),
+and it reads and writes the same files as the console app:
+
+- `.yproj` projects exported from the web open on Xbox, and the other way round.
+- `.yplug` plugins (effects and sound packs) install the same way. **Plugins → Install examples** loads the ones in `samples/plugins`.
+- The 9 built-in effects and 6 built-in loops are ported from the Xbox app, which keeps projects portable between the two.
+
+The web version has no USB drive to manage, so the **Files** page keeps an audio library and project backups in browser storage
+(IndexedDB) instead. It also lets you preview sounds before adding them, trim clips by dragging their edges, redo as well as undo,
+and it offsets recordings by the browser's reported output latency.
+
+Run it locally by serving the folder: `python -m http.server` in the repo root, then open `/web/`.
+Opening the file straight from disk also works, apart from "Install examples".
+Pushing changes under `web/` to `main` republishes the site through `.github/workflows/web-pages.yml`.
+
 ## Features
 
 | Area | What's there |

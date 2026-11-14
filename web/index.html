@@ -1,0 +1,1818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yursic Studio</title>
+<meta name="description" content="Yursic Studio: a multitrack music studio in your browser. Record, arrange loops, add effects and plugins, export WAV.">
+<meta name="theme-color" content="#14141A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%237C5CFF'/%3E%3Cpath d='M14 40v-8M22 46V18M30 38V26M38 50V14M46 42V22' stroke='white' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --accent:#7C5CFF; --accent2:#00D4AA; --rec:#FF3B5C; --bg:#14141A; --surface:#1E1E26; --surface2:#272731;
+  --line:#33333F; --dim:#9A9AAE; --text:#EDEDF5; --row:96px; --radius:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.4 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+button{background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+button:hover{background:#30303c}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);font-weight:600}
+button.primary:hover{background:#9278FF}
+button.danger{color:#ff8fa3}
+button.ghost{background:transparent;border-color:transparent}
+button.ghost:hover{background:var(--surface2)}
+button.on{background:var(--accent);border-color:var(--accent)}
+input[type=text],input[type=number],input[type=search],select{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;outline:none}
+input[type=range]{accent-color:var(--accent);cursor:pointer}
+:focus{outline:none}
+:focus-visible,body.gamepad :focus{outline:3px solid var(--accent2)!important;outline-offset:2px}
+.dim{color:var(--dim)}
+.small{font-size:12px}
+.row{display:flex;align-items:center;gap:8px}
+.grow{flex:1}
+.hidden{display:none!important}
+
+/* shell */
+#app{display:grid;grid-template-rows:52px 1fr;height:100%}
+#nav{display:flex;align-items:center;gap:6px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+#nav .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;margin-right:18px}
+#nav .logo i{width:26px;height:26px;border-radius:7px;background:var(--accent);display:grid;place-items:center;font-style:normal;font-size:13px}
+#nav button.tab{background:transparent;border:none;padding:8px 14px;color:var(--dim);border-radius:8px}
+#nav button.tab.active{color:var(--text);background:var(--surface2)}
+#main{overflow:hidden;position:relative}
+.page{position:absolute;inset:0;overflow:auto;padding:28px 40px}
+.page h1{margin:0 0 4px;font-size:26px}
+.page h2{font-size:17px;margin:28px 0 10px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin-top:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:6px;text-align:left}
+button.card:hover{background:var(--surface2)}
+.card .title{font-weight:600;font-size:16px}
+.card .bar{height:4px;border-radius:2px;margin-bottom:6px}
+.list{display:flex;flex-direction:column;gap:6px}
+.item{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px}
+.item .name{font-weight:600}
+.drop{border:2px dashed var(--line);border-radius:var(--radius);padding:18px;text-align:center;color:var(--dim);margin-top:12px}
+.drop.over{border-color:var(--accent);color:var(--text)}
+.meterbar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.meterbar>div{height:100%;background:var(--accent2)}
+.empty{padding:30px;text-align:center;color:var(--dim)}
+
+/* studio */
+#studio{position:absolute;inset:0;display:grid;grid-template-rows:60px 1fr auto}
+#transport{display:flex;align-items:center;gap:8px;padding:0 14px;background:var(--surface);border-bottom:1px solid var(--line);overflow-x:auto}
+#transport .big{width:42px;height:42px;padding:0;border-radius:50%;font-size:16px;display:grid;place-items:center;flex:none}
+#transport .rec{color:var(--rec)}
+#transport .rec.on{background:var(--rec);border-color:var(--rec);color:#fff}
+#clock{font:600 18px/1 ui-monospace,Consolas,monospace;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 12px;min-width:170px;text-align:center;flex:none}
+#clock small{display:block;font-size:11px;color:var(--dim);margin-top:3px}
+#transport input[type=number]{width:70px}
+.sep{width:1px;height:30px;background:var(--line);flex:none;margin:0 4px}
+#projname{font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+#tl{display:grid;grid-template-columns:230px 1fr;min-height:0}
+#heads{position:relative;overflow:hidden;background:var(--surface);border-right:1px solid var(--line)}
+#headsInner{position:absolute;left:0;right:0;top:0;padding-top:28px}
+.th{height:var(--row);display:grid;grid-template-columns:6px 1fr;border-bottom:1px solid var(--line);cursor:pointer}
+.th.sel{background:var(--surface2)}
+.th .col{border-radius:0}
+.th .body{padding:6px 8px 4px 10px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.th .tname{font-weight:600;background:transparent;border:none;padding:2px 4px;text-align:left;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.tbtn{width:28px;height:24px;padding:0;font-size:12px;font-weight:700;border-radius:6px}
+.tbtn.m.on{background:#FFC83D;border-color:#FFC83D;color:#111}
+.tbtn.s.on{background:var(--accent2);border-color:var(--accent2);color:#111}
+.tbtn.r .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--rec)}
+.tbtn.r.on{background:var(--rec);border-color:var(--rec)}
+.tbtn.r.on .dot{background:#fff}
+.th input[type=range]{width:100%;margin:0;height:16px}
+.hmeter{height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.hmeter>div{height:100%;width:0;background:var(--accent2)}
+#addTrack{margin:10px;width:calc(100% - 20px)}
+#tlview{position:relative;min-width:0;min-height:0}
+#tlcanvas{position:absolute;inset:0;width:100%;height:100%}
+#tlscroll{position:absolute;inset:0;overflow:auto}
+#tlscroll:focus-visible{outline-offset:-3px}
+#tlspacer{pointer-events:none}
+#panel{background:var(--surface);border-top:1px solid var(--line);display:flex;flex-direction:column;height:280px}
+#panel.collapsed{height:40px}
+#ptabs{display:flex;align-items:center;gap:4px;padding:4px 10px;border-bottom:1px solid var(--line);flex:none}
+#ptabs button.tab{background:transparent;border:none;color:var(--dim);padding:6px 14px}
+#ptabs button.tab.active{color:var(--text);background:var(--surface2)}
+#pbody{flex:1;overflow:auto;padding:12px 14px;min-height:0}
+.strips{display:flex;gap:8px;height:100%;min-height:200px}
+.strip{width:112px;flex:none;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.strip.sel{border-color:var(--accent)}
+.strip .cbar{height:4px;width:100%;border-radius:2px}
+.strip .sname{font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.strip .fader{display:flex;gap:8px;flex:1;min-height:60px;align-items:stretch}
+.strip input.v{writing-mode:vertical-lr;direction:rtl;width:22px;height:100%;margin:0}
+.vmeter{width:8px;background:var(--line);border-radius:4px;position:relative;overflow:hidden}
+.vmeter>div{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(to top,var(--accent2) 70%,#FFC83D 90%,var(--rec))}
+.strip input.p{width:100%;margin:0}
+.fxcards{display:flex;gap:10px;align-items:flex-start;min-height:100%}
+.fx{width:230px;flex:none;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+.fx.off{opacity:.55}
+.fx .fxhead{display:flex;align-items:center;gap:4px;margin-bottom:6px}
+.fx .fxhead .n{font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fx .fxhead button{padding:2px 7px;font-size:12px}
+.prm{display:grid;grid-template-columns:1fr auto;font-size:12px;margin-top:4px}
+.prm input{grid-column:1/3;width:100%;margin:2px 0 0}
+.snd{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:10px;padding:6px 10px;border-radius:8px}
+.snd:hover{background:var(--surface2)}
+.snd .sw{width:10px;height:28px;border-radius:3px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{padding:4px 12px;border-radius:999px;font-size:12px}
+
+/* overlays */
+#menu{position:fixed;z-index:50;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:6px;min-width:200px;box-shadow:0 10px 40px #0008;display:flex;flex-direction:column}
+#menu button{background:transparent;border:none;text-align:left;padding:8px 12px}
+#menu button:hover,#menu button:focus{background:#3a3a48}
+#menu hr{border:none;border-top:1px solid var(--line);margin:4px 0}
+#modalBack{position:fixed;inset:0;background:#0009;z-index:60;display:grid;place-items:center}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;width:min(440px,92vw);display:flex;flex-direction:column;gap:12px}
+.modal h3{margin:0;font-size:18px}
+.modal .acts{display:flex;justify-content:flex-end;gap:8px}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatches button{width:40px;height:40px;border-radius:10px;padding:0}
+#toasts{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:70;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:#2e2e3a;border:1px solid var(--line);border-radius:10px;padding:10px 16px;box-shadow:0 6px 24px #0007;max-width:80vw}
+.toast.err{border-color:var(--rec)}
+#help{font-size:12px;line-height:1.7}
+kbd{background:var(--surface2);border:1px solid var(--line);border-radius:4px;padding:0 5px;font-family:inherit;font-size:11px}
+@media (max-width:760px){
+  .page{padding:18px}
+  #tl{grid-template-columns:150px 1fr}
+  #panel{height:250px}
+  .strips{min-height:226px}
+  #ptabs .hint{display:none}
+  #nav .logo span{display:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="nav">
+    <div class="logo"><i>Y</i><span>Yursic Studio</span></div>
+    <button class="tab" data-page="home" data-k="nav-home">Projects</button>
+    <button class="tab" data-page="plugins" data-k="nav-plugins">Plugins</button>
+    <button class="tab" data-page="files" data-k="nav-files">Files</button>
+    <div class="grow"></div>
+    <span class="dim small" id="navinfo"></span>
+  </nav>
+  <div id="main"></div>
+</div>
+<div id="toasts"></div>
+<input type="file" id="filePick" class="hidden">
+
+<script>
+'use strict';
+/* ==========================================================================
+   Yursic Studio (web). One file: storage, plugin format, DSP, audio engine, UI.
+   Mirrors the Xbox app: same project (.yproj) and plugin (.yplug) formats.
+   ========================================================================== */
+
+// ---------- helpers ----------
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  if (attrs) for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'class') el.className = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if (k === 'value') el.value = v;
+    else if (k === 'checked') el.checked = v;
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat(Infinity)) if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(c));
+  return el;
+}
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2) + Date.now().toString(16)).replace(/-/g, '');
+const dbToGain = db => Math.pow(10, db / 20);
+const gainToDb = g => g <= 0.0001 ? -Infinity : 20 * Math.log10(g);
+const fmtDb = g => { const d = gainToDb(g); return d === -Infinity ? '-∞ dB' : (d > 0 ? '+' : '') + d.toFixed(1) + ' dB'; };
+const fmtPan = p => Math.abs(p) < 0.02 ? 'C' : (p < 0 ? 'L' : 'R') + Math.round(Math.abs(p) * 100);
+const fmtSize = b => b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(0) + ' KB' : b < 1073741824 ? (b / 1048576).toFixed(1) + ' MB' : (b / 1073741824).toFixed(2) + ' GB';
+const fmtDate = s => { try { return new Date(s).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }); } catch { return ''; } };
+const safeName = s => (s || 'audio').replace(/[\\/:*?"<>|\x00-\x1f]+/g, '').trim().slice(0, 60) || 'audio';
+const ext = n => (n.match(/\.([^.\/]+)$/) || [, ''])[1].toLowerCase();
+function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function download(blob, name) {
+  const a = h('a', { href: URL.createObjectURL(blob), download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+}
+function toast(msg, err) {
+  const t = h('div', { class: 'toast' + (err ? ' err' : '') }, msg);
+  $('#toasts').append(t);
+  setTimeout(() => t.remove(), err ? 6000 : 3200);
+}
+function pickFiles({ accept = '', multiple = false, folder = false } = {}) {
+  return new Promise(res => {
+    const old = $('#filePick'), inp = old.cloneNode();
+    old.replaceWith(inp);
+    inp.accept = accept; inp.multiple = multiple;
+    if (folder) inp.setAttribute('webkitdirectory', ''); else inp.removeAttribute('webkitdirectory');
+    inp.onchange = () => res([...inp.files]);
+    inp.click();
+  });
+}
+const AUDIO_EXT = ['wav', 'mp3', 'm4a', 'wma', 'flac', 'aac', 'ogg', 'oga', 'opus', 'webm', 'aif', 'aiff'];
+
+// ---------- storage (IndexedDB, falls back to memory) ----------
+const DB = {
+  db: null, mem: {}, stores: ['projects', 'audio', 'plugins', 'library'],
+  async open() {
+    for (const s of this.stores) this.mem[s] = new Map();
+    try {
+      this.db = await new Promise((res, rej) => {
+        const r = indexedDB.open('yursic', 1);
+        r.onupgradeneeded = () => { for (const s of this.stores) if (!r.result.objectStoreNames.contains(s)) r.result.createObjectStore(s); };
+        r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error('blocked'));
+      });
+    } catch (e) { console.warn('IndexedDB unavailable, using memory', e); this.db = null; }
+  },
+  req(store, mode, fn) {
+    return new Promise((res, rej) => {
+      const tx = this.db.transaction(store, mode), st = tx.objectStore(store), r = fn(st);
+      tx.oncomplete = () => res(r && r.result); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+    });
+  },
+  async get(s, k) { return this.db ? this.req(s, 'readonly', st => st.get(k)) : this.mem[s].get(k); },
+  async put(s, k, v) { if (this.db) return this.req(s, 'readwrite', st => st.put(v, k)); this.mem[s].set(k, v); },
+  async del(s, k) { if (this.db) return this.req(s, 'readwrite', st => st.delete(k)); this.mem[s].delete(k); },
+  async keys(s) { return this.db ? this.req(s, 'readonly', st => st.getAllKeys()) : [...this.mem[s].keys()]; },
+  async all(s) {
+    if (!this.db) return [...this.mem[s].entries()];
+    const [k, v] = await Promise.all([this.req(s, 'readonly', st => st.getAllKeys()), this.req(s, 'readonly', st => st.getAll())]);
+    return k.map((key, i) => [key, v[i]]);
+  },
+};
+
+// ---------- zip (read: stored + deflate; write: stored) ----------
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8) { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function unsafePath(p) { return /(^|[\/\\])\.\.([\/\\]|$)/.test(p) || /^[\/\\]/.test(p) || /^[a-zA-Z]:/.test(p); }
+async function unzip(buf) {
+  const dv = new DataView(buf); let eocd = -1;
+  for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error('This is not a zip file.');
+  const count = dv.getUint16(eocd + 10, true); let p = dv.getUint32(eocd + 16, true);
+  const out = new Map(), td = new TextDecoder();
+  for (let k = 0; k < count; k++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) throw new Error('Damaged zip file.');
+    const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), el = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lho = dv.getUint32(p + 42, true);
+    const name = td.decode(new Uint8Array(buf, p + 46, nl)); p += 46 + nl + el + cl;
+    if (unsafePath(name)) throw new Error('The archive contains an unsafe path: ' + name);
+    if (name.endsWith('/') || name.endsWith('\\')) continue;
+    const start = lho + 30 + dv.getUint16(lho + 26, true) + dv.getUint16(lho + 28, true);
+    const data = new Uint8Array(buf, start, csize);
+    let bytes;
+    if (method === 0) bytes = data.slice().buffer;
+    else if (method === 8) {
+      if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot unpack compressed zips.');
+      bytes = await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer();
+    } else throw new Error('Unsupported compression in ' + name);
+    out.set(name.replace(/\\/g, '/'), bytes);
+  }
+  return out;
+}
+function zip(entries /* [name, Uint8Array|ArrayBuffer|string] */) {
+  const te = new TextEncoder(), parts = [], central = []; let off = 0;
+  const d = new Date(), time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  for (let [name, data] of entries) {
+    data = typeof data === 'string' ? te.encode(data) : data instanceof Uint8Array ? data : new Uint8Array(data);
+    const nb = te.encode(name), crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, time, true); lh.setUint16(12, date, true); lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true); lh.setUint16(26, nb.length, true);
+    parts.push(lh.buffer, nb, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x800, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, time, true); ch.setUint16(14, date, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true); ch.setUint16(28, nb.length, true); ch.setUint32(42, off, true);
+    central.push(ch.buffer, nb);
+    off += 30 + nb.length + data.length;
+  }
+  const csize = central.reduce((a, b) => a + b.byteLength, 0), e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, entries.length, true); e.setUint16(10, entries.length, true); e.setUint32(12, csize, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...central, e.buffer], { type: 'application/zip' });
+}
+
+// ---------- WAV ----------
+function encodeWav(chs, sr) {
+  const n = chs[0].length, nc = chs.length, buf = new ArrayBuffer(44 + n * nc * 2), dv = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); dv.setUint32(4, 36 + n * nc * 2, true); w(8, 'WAVE'); w(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true);
+  dv.setUint16(22, nc, true); dv.setUint32(24, sr, true); dv.setUint32(28, sr * nc * 2, true); dv.setUint16(32, nc * 2, true); dv.setUint16(34, 16, true);
+  w(36, 'data'); dv.setUint32(40, n * nc * 2, true);
+  let o = 44;
+  for (let i = 0; i < n; i++) for (let c = 0; c < nc; c++) { const s = clamp(chs[c][i], -1, 1); dv.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7FFF, true); o += 2; }
+  return new Blob([buf], { type: 'audio/wav' });
+}
+
+// ---------- plugin format ----------
+const NODES = {
+  gain: { db: 0 },
+  lowpass: { freq: 1000, q: 0.707, mix: 1 }, highpass: { freq: 1000, q: 0.707, mix: 1 }, bandpass: { freq: 1000, q: 0.707, mix: 1 },
+  peak: { freq: 1000, q: 0.707, gain: 0, mix: 1 }, lowshelf: { freq: 1000, q: 0.707, gain: 0, mix: 1 }, highshelf: { freq: 1000, q: 0.707, gain: 0, mix: 1 },
+  delay: { time: 350, feedback: 0.35, mix: 0.3, tone: 8000, pingpong: 0 },
+  distortion: { drive: 4, mix: 1, output: 0 },
+  bitcrush: { bits: 8, downsample: 4, mix: 1 },
+  compressor: { threshold: -18, ratio: 4, attack: 10, release: 120, makeup: 0 },
+  reverb: { size: 0.6, damp: 0.4, mix: 0.3, width: 1, predelay: 0 },
+  chorus: { rate: 0.8, depth: 6, mix: 0.4 },
+  tremolo: { rate: 4, depth: 0.5, stereo: 0 },
+  width: { amount: 1 },
+};
+const EXPR = /^\s*\$([A-Za-z_][A-Za-z0-9_]*)\s*(?:\*\s*(-?[0-9]*\.?[0-9]+))?\s*(?:([+-])\s*([0-9]*\.?[0-9]+))?\s*$/;
+const ID_RE = /^[A-Za-z0-9._-]{3,80}$/;
+
+function parsePlugin(text) {
+  let p;
+  try { p = typeof text === 'string' ? JSON.parse(text) : text; } catch (e) { return { errors: ['plugin.json is not valid JSON: ' + e.message] }; }
+  const errors = [];
+  if (!p || typeof p !== 'object') return { errors: ['plugin.json must be an object'] };
+  if (typeof p.id !== 'string' || !ID_RE.test(p.id)) errors.push('"id" must be 3-80 letters, numbers, dots, dashes or underscores');
+  if (typeof p.name !== 'string' || !p.name.trim()) errors.push('"name" is required');
+  const params = [];
+  for (const raw of Array.isArray(p.params) ? p.params : []) {
+    if (!raw || !raw.id) { errors.push('a param is missing its id'); continue; }
+    const min = +(raw.min ?? 0), max = +(raw.max ?? 1);
+    if (!(max > min)) errors.push(`param "${raw.id}": max must be above min`);
+    const curve = raw.curve === 'log' ? 'log' : 'linear';
+    if (curve === 'log' && !(min > 0)) errors.push(`param "${raw.id}": log curve needs min > 0`);
+    params.push({ id: raw.id, name: raw.name || raw.id, min, max, def: clamp(+(raw.default ?? min), min, max), unit: raw.unit || '', curve });
+  }
+  const pids = new Set(params.map(x => x.id));
+  const chain = Array.isArray(p.chain) ? p.chain : [];
+  if (chain.length > 16) errors.push('a chain can have at most 16 nodes');
+  chain.forEach((n, i) => {
+    const kind = n && n.node;
+    if (!NODES[kind]) { errors.push(`chain[${i}]: unknown node "${kind}" (known: ${Object.keys(NODES).join(', ')})`); return; }
+    for (const [key, val] of Object.entries(n)) {
+      if (key === 'node') continue;
+      if (!(key in NODES[kind])) { errors.push(`chain[${i}] (${kind}): unknown setting "${key}"`); continue; }
+      if (typeof val === 'number' || typeof val === 'boolean') continue;
+      if (typeof val === 'string') {
+        const m = val.match(EXPR);
+        if (!m) errors.push(`chain[${i}] (${kind}).${key}: "${val}" must be a number, "$param" or "$param*2+100"`);
+        else if (!pids.has(m[1])) errors.push(`chain[${i}] (${kind}).${key}: "$${m[1]}" is not in params`);
+      } else if (val && typeof val === 'object') {
+        if (!pids.has(val.param)) errors.push(`chain[${i}] (${kind}).${key}: param "${val.param}" is not in params`);
+      } else errors.push(`chain[${i}] (${kind}).${key}: unsupported value`);
+    }
+  });
+  const sounds = [];
+  for (const s of Array.isArray(p.sounds) ? p.sounds : []) {
+    if (!s || typeof s.file !== 'string') { errors.push('a sound is missing its "file"'); continue; }
+    if (unsafePath(s.file)) errors.push(`sound "${s.file}": path must be relative to the plugin folder`);
+    else if (!AUDIO_EXT.includes(ext(s.file))) errors.push(`sound "${s.file}": unsupported audio type`);
+    sounds.push({ file: s.file.replace(/\\/g, '/'), name: s.name || s.file.split('/').pop().replace(/\.[^.]+$/, ''), category: s.category || 'Sounds', bpm: +s.bpm || 0 });
+  }
+  if (!chain.length && !sounds.length) errors.push('needs a "chain" (effect) or "sounds" (sound pack)');
+  return {
+    errors,
+    def: { id: p.id, name: p.name, version: p.version || '', author: p.author || '', description: p.description || '', category: p.category || (chain.length ? 'Effect' : 'Sounds'), params, chain, sounds },
+  };
+}
+function resolve(v, values) {
+  if (typeof v === 'number') return v;
+  if (typeof v === 'boolean') return v ? 1 : 0;
+  if (typeof v === 'string') {
+    const m = v.match(EXPR); if (!m) return 0;
+    let x = (values[m[1]] ?? 0) * (m[2] != null ? +m[2] : 1);
+    if (m[3]) x += (m[3] === '-' ? -1 : 1) * +m[4];
+    return x;
+  }
+  if (v && typeof v === 'object') return (values[v.param] ?? 0) * (v.scale ?? 1) + (v.offset ?? 0);
+  return 0;
+}
+
+const BUILTIN_FX = [
+  { id: 'yursic.reverb', name: 'Studio Reverb', category: 'Reverb', params: [{ id: 'size', name: 'Room size', min: 0, max: 1, default: 0.6, unit: '%' }, { id: 'damp', name: 'Darkness', min: 0, max: 1, default: 0.4, unit: '%' }, { id: 'predelay', name: 'Pre-delay', min: 0, max: 120, default: 15, unit: 'ms' }, { id: 'mix', name: 'Mix', min: 0, max: 1, default: 0.25, unit: '%' }], chain: [{ node: 'reverb', size: '$size', damp: '$damp', predelay: '$predelay', mix: '$mix' }] },
+  { id: 'yursic.echo', name: 'Echo', category: 'Delay', params: [{ id: 'time', name: 'Time', min: 20, max: 1500, default: 375, unit: 'ms', curve: 'log' }, { id: 'feedback', name: 'Feedback', min: 0, max: 0.9, default: 0.35, unit: '%' }, { id: 'tone', name: 'Tone', min: 500, max: 16000, default: 6000, unit: 'Hz', curve: 'log' }, { id: 'pingpong', name: 'Ping-pong', min: 0, max: 1, default: 0 }, { id: 'mix', name: 'Mix', min: 0, max: 1, default: 0.3, unit: '%' }], chain: [{ node: 'delay', time: '$time', feedback: '$feedback', tone: '$tone', pingpong: '$pingpong', mix: '$mix' }] },
+  { id: 'yursic.overdrive', name: 'Overdrive', category: 'Distortion', params: [{ id: 'drive', name: 'Drive', min: 1, max: 40, default: 6, curve: 'log' }, { id: 'tone', name: 'Tone', min: 800, max: 14000, default: 5000, unit: 'Hz', curve: 'log' }, { id: 'level', name: 'Level', min: -24, max: 6, default: -6, unit: 'dB' }], chain: [{ node: 'highpass', freq: 80 }, { node: 'distortion', drive: '$drive', output: '$level' }, { node: 'lowpass', freq: '$tone', q: 0.6 }] },
+  { id: 'yursic.compressor', name: 'Compressor', category: 'Dynamics', params: [{ id: 'threshold', name: 'Threshold', min: -48, max: 0, default: -18, unit: 'dB' }, { id: 'ratio', name: 'Ratio', min: 1, max: 20, default: 4, curve: 'log' }, { id: 'attack', name: 'Attack', min: 0.5, max: 100, default: 10, unit: 'ms', curve: 'log' }, { id: 'release', name: 'Release', min: 20, max: 1000, default: 150, unit: 'ms', curve: 'log' }, { id: 'makeup', name: 'Makeup', min: 0, max: 24, default: 4, unit: 'dB' }], chain: [{ node: 'compressor', threshold: '$threshold', ratio: '$ratio', attack: '$attack', release: '$release', makeup: '$makeup' }] },
+  { id: 'yursic.eq3', name: '3-Band EQ', category: 'EQ', params: [{ id: 'low', name: 'Low', min: -15, max: 15, default: 0, unit: 'dB' }, { id: 'mid', name: 'Mid', min: -15, max: 15, default: 0, unit: 'dB' }, { id: 'midfreq', name: 'Mid freq', min: 200, max: 6000, default: 1200, unit: 'Hz', curve: 'log' }, { id: 'high', name: 'High', min: -15, max: 15, default: 0, unit: 'dB' }], chain: [{ node: 'lowshelf', freq: 150, gain: '$low' }, { node: 'peak', freq: '$midfreq', q: 0.9, gain: '$mid' }, { node: 'highshelf', freq: 6000, gain: '$high' }] },
+  { id: 'yursic.lofi', name: 'Lo-Fi', category: 'Creative', params: [{ id: 'bits', name: 'Bits', min: 4, max: 16, default: 10 }, { id: 'down', name: 'Downsample', min: 1, max: 16, default: 3 }, { id: 'cutoff', name: 'Cutoff', min: 800, max: 12000, default: 4000, unit: 'Hz', curve: 'log' }, { id: 'mix', name: 'Mix', min: 0, max: 1, default: 0.8, unit: '%' }], chain: [{ node: 'bitcrush', bits: '$bits', downsample: '$down', mix: '$mix' }, { node: 'lowpass', freq: '$cutoff' }, { node: 'width', amount: 0.6 }] },
+  { id: 'yursic.chorus', name: 'Chorus', category: 'Modulation', params: [{ id: 'rate', name: 'Rate', min: 0.05, max: 5, default: 0.8, unit: 'Hz', curve: 'log' }, { id: 'depth', name: 'Depth', min: 0.5, max: 15, default: 5, unit: 'ms' }, { id: 'mix', name: 'Mix', min: 0, max: 1, default: 0.45, unit: '%' }], chain: [{ node: 'chorus', rate: '$rate', depth: '$depth', mix: '$mix' }] },
+  { id: 'yursic.tremolo', name: 'Tremolo / Auto-pan', category: 'Modulation', params: [{ id: 'rate', name: 'Rate', min: 0.1, max: 15, default: 4, unit: 'Hz', curve: 'log' }, { id: 'depth', name: 'Depth', min: 0, max: 1, default: 0.6, unit: '%' }, { id: 'stereo', name: 'Auto-pan', min: 0, max: 1, default: 0 }], chain: [{ node: 'tremolo', rate: '$rate', depth: '$depth', stereo: '$stereo' }] },
+  { id: 'yursic.filter', name: 'Filter', category: 'Filter', params: [{ id: 'lowcut', name: 'Low cut', min: 20, max: 2000, default: 20, unit: 'Hz', curve: 'log' }, { id: 'highcut', name: 'High cut', min: 500, max: 20000, default: 20000, unit: 'Hz', curve: 'log' }, { id: 'res', name: 'Resonance', min: 0.5, max: 8, default: 0.707, curve: 'log' }], chain: [{ node: 'highpass', freq: '$lowcut', q: '$res' }, { node: 'lowpass', freq: '$highcut', q: '$res' }] },
+].map(j => { const d = parsePlugin(j).def; d.builtIn = true; d.author = 'Yursic'; return d; });
+
+const Plugins = {
+  installed: new Map(), // id -> { def, files: {path: ArrayBuffer} }
+  async load() {
+    for (const [id, rec] of await DB.all('plugins')) {
+      const r = parsePlugin(rec.json);
+      if (r.def) this.installed.set(id, { def: r.def, files: rec.files || {}, installed: rec.installed });
+    }
+  },
+  get(id) { return BUILTIN_FX.find(d => d.id === id) || this.installed.get(id)?.def || null; },
+  effects() { return [...BUILTIN_FX, ...[...this.installed.values()].map(p => p.def).filter(d => d.chain.length)]; },
+  /** files: Map(path -> ArrayBuffer). Finds plugin.json (root or one folder down). */
+  async install(files, sourceName) {
+    let root = null;
+    for (const path of files.keys()) {
+      const parts = path.split('/');
+      if (parts[parts.length - 1].toLowerCase() === 'plugin.json' && (root == null || parts.length - 1 < root.split('/').length - 1))
+        root = parts.slice(0, -1).join('/');
+    }
+    if (root == null) throw new Error(`${sourceName}: no plugin.json found.`);
+    const pre = root ? root + '/' : '';
+    const json = new TextDecoder().decode(files.get(pre + 'plugin.json'));
+    const r = parsePlugin(json);
+    if (r.def) for (const s of r.def.sounds) if (!files.has(pre + s.file)) r.errors.push(`sound "${s.file}": file not found`);
+    if (r.errors.length) throw new Error(`${sourceName}: ` + r.errors.join('; '));
+    if (BUILTIN_FX.some(d => d.id === r.def.id)) throw new Error(`"${r.def.id}" is a built-in effect id.`);
+    const keep = {};
+    for (const s of r.def.sounds) keep[s.file] = files.get(pre + s.file);
+    const replaced = this.installed.has(r.def.id);
+    const rec = { json, files: keep, installed: new Date().toISOString() };
+    await DB.put('plugins', r.def.id, rec);
+    this.installed.set(r.def.id, { def: r.def, files: keep, installed: rec.installed });
+    return { def: r.def, replaced };
+  },
+  async installFile(file) {
+    const buf = await file.arrayBuffer();
+    if (ext(file.name) === 'json') return this.install(new Map([['plugin.json', buf]]), file.name);
+    return this.install(await unzip(buf), file.name);
+  },
+  async remove(id) { await DB.del('plugins', id); this.installed.delete(id); },
+};
+
+// ---------- built-in sounds (synthesized; same recipes as the Xbox app) ----------
+const midiFreq = m => 440 * Math.pow(2, (m - 69) / 12);
+function synthBuf(sr, seconds) { const n = Math.ceil(seconds * sr); return [new Float32Array(n), new Float32Array(n)]; }
+function addS(d, f, v, pan = 0) { if (f < 0 || f >= d[0].length) return; d[0][f] += v * (1 - Math.max(0, pan)); d[1][f] += v * (1 + Math.min(0, pan)); }
+function genBeat(sr, bpm, ...patterns) {
+  const step = 60 / bpm / 4, d = synthBuf(sr, step * 32), rng = mulberry(7);
+  for (let bar = 0; bar < 2; bar++) for (const p of patterns) for (let i = 0; i < 16 && i < p.length; i++) {
+    const st = Math.floor((bar * 16 + i) * step * sr);
+    if (p[i] === 'K') { let ph = 0; for (let j = 0; j < 0.4 * sr; j++) { const t = j / sr; ph += 2 * Math.PI * (45 + 110 * Math.exp(-t * 30)) / sr; addS(d, st + j, Math.sin(ph) * Math.exp(-t * 7) * 0.9); } }
+    else if (p[i] === 'S') for (let j = 0; j < 0.25 * sr; j++) { const t = j / sr; addS(d, st + j, (rng() * 2 - 1) * Math.exp(-t * 18) * 0.45 + Math.sin(2 * Math.PI * 190 * t) * Math.exp(-t * 25) * 0.35); }
+    else if (p[i] === 'x') { let prev = 0; const amp = i % 4 === 0 ? 0.35 : 0.22; for (let j = 0; j < 0.05 * sr; j++) { const n = rng() * 2 - 1, hp = n - prev; prev = n; addS(d, st + j, hp * amp * Math.exp(-j / sr * 60), 0.2); } }
+  }
+  return d;
+}
+function genBass(sr, bpm, notes) {
+  const beat = 60 / bpm, d = synthBuf(sr, beat * 8);
+  for (let n = 0; n < 8; n++) { const f = midiFreq(notes[(n >> 1) % notes.length]), st = Math.floor(n * beat * sr); for (let i = 0; i < beat * 0.9 * sr; i++) { const t = i / sr, env = Math.min(1, t * 200) * Math.exp(-t * 2.5), s = Math.sin(2 * Math.PI * f * t) + 0.3 * Math.sin(4 * Math.PI * f * t); addS(d, st + i, Math.tanh(s * 1.5) * env * 0.5); } }
+  return d;
+}
+function genPad(sr, bpm, a, b) {
+  const bar = 60 / bpm * 4, d = synthBuf(sr, bar * 2), len = Math.floor(bar * sr);
+  [a, b].forEach((chord, c) => { const st = Math.floor(c * bar * sr); for (const note of chord) { const f = midiFreq(note); for (let i = 0; i < len; i++) { const t = i / sr, env = Math.min(1, t * 3) * Math.min(1, (len - i) / (0.3 * sr)), s = Math.sin(2 * Math.PI * f * t) + 0.5 * Math.sin(2 * Math.PI * f * 1.003 * t) + 0.25 * Math.sin(4 * Math.PI * f * t); addS(d, st + i, s * env * 0.09, Math.sin(t * 0.7) * 0.3); } } });
+  return d;
+}
+function genArp(sr, bpm, notes) {
+  const step = 60 / bpm / 4, d = synthBuf(sr, step * 32);
+  for (let n = 0; n < 32; n++) { const f = midiFreq(notes[n % notes.length]), st = Math.floor(n * step * sr), pan = n % 2 ? 0.3 : -0.3; for (let i = 0; i < 0.3 * sr; i++) { const t = i / sr; addS(d, st + i, (2 * ((f * t) % 1) - 1) * Math.exp(-t * 14) * 0.18, pan); } }
+  return d;
+}
+const BUILTIN_SOUNDS = [
+  { name: 'Boom Bap Beat', category: 'Drums', bpm: 90, gen: sr => genBeat(sr, 90, 'K...S..K.KS.....', 'x.x.x.x.x.x.x.x.') },
+  { name: 'Four on the Floor', category: 'Drums', bpm: 120, gen: sr => genBeat(sr, 120, 'K...K...K...K...', '..x...x...x...x.', '....S.......S...') },
+  { name: 'Trap Hats', category: 'Drums', bpm: 140, gen: sr => genBeat(sr, 140, 'K.......K.K.....', 'xxxxxxxxxxxxxxxx', '........S.......') },
+  { name: 'Sub Bass Line', category: 'Bass', bpm: 120, gen: sr => genBass(sr, 120, [36, 36, 43, 41]) },
+  { name: 'Minor Pad', category: 'Keys', bpm: 120, gen: sr => genPad(sr, 120, [57, 60, 64], [53, 57, 60]) },
+  { name: 'Pluck Arp', category: 'Synth', bpm: 120, gen: sr => genArp(sr, 120, [69, 72, 76, 79, 76, 72]) },
+].map(s => ({ ...s, source: 'Built-in' }));
+
+// ---------- DSP: plugin nodes on Web Audio ----------
+const WORKLET = `class C extends AudioWorkletProcessor{static get parameterDescriptors(){return[{name:'bits',defaultValue:8,minValue:1,maxValue:24},{name:'down',defaultValue:4,minValue:1,maxValue:64}]}
+constructor(){super();this.h=[0,0];this.c=0}
+process(ins,outs,p){const i=ins[0],o=outs[0];if(!i||!i.length){for(const ch of o)ch.fill(0);return true}
+const q=Math.pow(2,p.bits[0]-1),d=Math.max(1,Math.round(p.down[0])),n=o[0].length;
+for(let s=0;s<n;s++){if(this.c<=0){for(let ch=0;ch<o.length;ch++){const x=(i[ch]||i[0])[s];this.h[ch]=Math.round(x*q)/q}this.c=d}this.c--;for(let ch=0;ch<o.length;ch++)o[ch][s]=this.h[ch]}return true}}
+registerProcessor('yursic-crush',C)`;
+let workletURL = null;
+async function addWorklet(ctx) {
+  if (!ctx.audioWorklet) return false;
+  const tries = [];
+  try { workletURL = workletURL || URL.createObjectURL(new Blob([WORKLET], { type: 'application/javascript' })); tries.push(workletURL); } catch { }
+  tries.push('data:application/javascript;charset=utf-8,' + encodeURIComponent(WORKLET));
+  for (const u of tries) { try { await ctx.audioWorklet.addModule(u); return true; } catch { } }
+  return false;
+}
+const G = (ctx, v = 1) => { const g = ctx.createGain(); g.gain.value = v; return g; };
+function withMix(ctx, mix, wet) {
+  mix = clamp(mix, 0, 1);
+  if (mix >= 0.999) return wet;
+  const inp = G(ctx), out = G(ctx), dry = G(ctx, 1 - mix), wg = G(ctx, mix);
+  inp.connect(dry).connect(out); inp.connect(wet.input); wet.output.connect(wg).connect(out);
+  return { input: inp, output: out };
+}
+const irCache = new Map();
+function makeIR(ctx, size, damp, width) {
+  const sr = ctx.sampleRate, key = [sr, size.toFixed(2), damp.toFixed(2), width.toFixed(2)].join('|');
+  if (irCache.has(key)) return irCache.get(key);
+  const dur = 0.3 + clamp(size, 0, 1) * 3.7, n = Math.floor(dur * sr), buf = ctx.createBuffer(2, n, sr), L = buf.getChannelData(0), R = buf.getChannelData(1), rnd = mulberry(1234);
+  let lL = 0, lR = 0; const w = clamp(width, 0, 1);
+  for (let i = 0; i < n; i++) {
+    const t = i / sr, env = Math.exp(-6.9 * t / dur) * Math.min(1, i / (0.002 * sr)), a = Math.min(0.96, damp * 0.9 * (0.25 + 0.75 * i / n));
+    const nl = rnd() * 2 - 1, nr = w * (rnd() * 2 - 1) + (1 - w) * nl;
+    lL = lL * a + nl * (1 - a); lR = lR * a + nr * (1 - a);
+    L[i] = lL * env; R[i] = lR * env;
+  }
+  if (irCache.size > 24) irCache.delete(irCache.keys().next().value);
+  irCache.set(key, buf);
+  return buf;
+}
+function lfo(ctx, rate, amount, lfos) {
+  const o = ctx.createOscillator(); o.frequency.value = Math.max(0.01, rate);
+  const g = G(ctx, amount); o.connect(g); lfos.push(o); return g;
+}
+const nyq = (ctx, f) => clamp(f, 10, ctx.sampleRate / 2 - 100);
+function buildNode(ctx, kind, s, lfos, workletOK) {
+  switch (kind) {
+    case 'gain': { const g = G(ctx, dbToGain(s.db)); return { input: g, output: g }; }
+    case 'lowpass': case 'highpass': case 'bandpass': case 'peak': case 'lowshelf': case 'highshelf': {
+      const f = ctx.createBiquadFilter(); f.type = kind === 'peak' ? 'peaking' : kind;
+      f.frequency.value = nyq(ctx, s.freq); f.Q.value = clamp(s.q, 0.05, 40); if ('gain' in s) f.gain.value = clamp(s.gain, -40, 40);
+      return withMix(ctx, s.mix, { input: f, output: f });
+    }
+    case 'delay': {
+      const t = clamp(s.time, 1, 2000) / 1000, fb = clamp(s.feedback, 0, 0.95), inp = G(ctx), out = G(ctx);
+      if (s.pingpong >= 0.5) {
+        const mono = G(ctx); mono.channelCount = 1; mono.channelCountMode = 'explicit';
+        const dL = ctx.createDelay(2.1), dR = ctx.createDelay(2.1), tL = ctx.createBiquadFilter(), tR = ctx.createBiquadFilter(), merge = ctx.createChannelMerger(2), f1 = G(ctx, fb), f2 = G(ctx, fb);
+        dL.delayTime.value = dR.delayTime.value = t; tL.frequency.value = tR.frequency.value = nyq(ctx, s.tone);
+        inp.connect(mono).connect(dL).connect(tL); tL.connect(merge, 0, 0); tL.connect(f1).connect(dR).connect(tR); tR.connect(merge, 0, 1); tR.connect(f2).connect(dL);
+        merge.connect(out);
+      } else {
+        const d = ctx.createDelay(2.1), tone = ctx.createBiquadFilter(), f = G(ctx, fb);
+        d.delayTime.value = t; tone.frequency.value = nyq(ctx, s.tone);
+        inp.connect(d).connect(tone).connect(out); tone.connect(f).connect(d);
+      }
+      return withMix(ctx, s.mix, { input: inp, output: out });
+    }
+    case 'distortion': {
+      const ws = ctx.createWaveShaper(), drive = clamp(s.drive, 1, 50), n = 2048, c = new Float32Array(n), norm = Math.tanh(drive);
+      for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(drive * x) / norm; }
+      ws.curve = c; ws.oversample = '2x'; const o = G(ctx, dbToGain(s.output)); ws.connect(o);
+      return withMix(ctx, s.mix, { input: ws, output: o });
+    }
+    case 'bitcrush': {
+      let node;
+      if (workletOK) {
+        node = new AudioWorkletNode(ctx, 'yursic-crush', { outputChannelCount: [2] });
+        node.parameters.get('bits').value = clamp(s.bits, 2, 16); node.parameters.get('down').value = clamp(s.downsample, 1, 32);
+      } else { // fallback: quantize only
+        node = ctx.createWaveShaper(); const q = Math.pow(2, clamp(s.bits, 2, 16) - 1), n = 4096, c = new Float32Array(n);
+        for (let i = 0; i < n; i++) c[i] = Math.round((i / (n - 1) * 2 - 1) * q) / q; node.curve = c;
+      }
+      return withMix(ctx, s.mix, { input: node, output: node });
+    }
+    case 'compressor': {
+      const c = ctx.createDynamicsCompressor(); c.threshold.value = clamp(s.threshold, -100, 0); c.ratio.value = clamp(s.ratio, 1, 20);
+      c.attack.value = clamp(s.attack / 1000, 0, 1); c.release.value = clamp(s.release / 1000, 0, 1); c.knee.value = 4;
+      const m = G(ctx, dbToGain(s.makeup)); c.connect(m); return { input: c, output: m };
+    }
+    case 'reverb': {
+      const inp = G(ctx), pd = ctx.createDelay(0.25), conv = ctx.createConvolver();
+      pd.delayTime.value = clamp(s.predelay, 0, 200) / 1000; conv.buffer = makeIR(ctx, s.size, clamp(s.damp, 0, 1), s.width);
+      inp.connect(pd).connect(conv); const o = G(ctx, 0.9); conv.connect(o);
+      return withMix(ctx, s.mix, { input: inp, output: o });
+    }
+    case 'chorus': {
+      const inp = G(ctx), sp = ctx.createChannelSplitter(2), mg = ctx.createChannelMerger(2), depth = clamp(s.depth, 0.1, 20) / 1000;
+      inp.channelCount = 2; inp.channelCountMode = 'explicit'; inp.connect(sp);
+      [0, 1].forEach(ch => { const d = ctx.createDelay(0.1); d.delayTime.value = 0.007 + depth / 2; lfo(ctx, s.rate, (ch ? -1 : 1) * depth / 2, lfos).connect(d.delayTime); sp.connect(d, ch).connect(mg, 0, ch); });
+      return withMix(ctx, s.mix, { input: inp, output: mg });
+    }
+    case 'tremolo': {
+      const depth = clamp(s.depth, 0, 1);
+      if (s.stereo >= 0.5) { const p = ctx.createStereoPanner(); p.pan.value = 0; lfo(ctx, s.rate, depth, lfos).connect(p.pan); return { input: p, output: p }; }
+      const g = G(ctx, 1 - depth / 2); lfo(ctx, s.rate, depth / 2, lfos).connect(g.gain); return { input: g, output: g };
+    }
+    case 'width': {
+      const w = clamp(s.amount, 0, 2), inp = G(ctx), sp = ctx.createChannelSplitter(2), mg = ctx.createChannelMerger(2);
+      inp.channelCount = 2; inp.channelCountMode = 'explicit'; inp.connect(sp);
+      const a = (1 + w) / 2, b = (1 - w) / 2;
+      sp.connect(G(ctx, a), 0).connect(mg, 0, 0); sp.connect(G(ctx, b), 1).connect(mg, 0, 0);
+      sp.connect(G(ctx, a), 1).connect(mg, 0, 1); sp.connect(G(ctx, b), 0).connect(mg, 0, 1);
+      return { input: inp, output: mg };
+    }
+  }
+  const g = G(ctx); return { input: g, output: g };
+}
+function buildChain(ctx, def, values, lfos, workletOK) {
+  const inp = G(ctx); let cur = inp;
+  for (const n of def.chain) {
+    const s = { ...NODES[n.node] };
+    for (const [k, v] of Object.entries(n)) if (k !== 'node' && k in s) s[k] = resolve(v, values);
+    const b = buildNode(ctx, n.node, s, lfos, workletOK);
+    cur.connect(b.input); cur = b.output;
+  }
+  return { input: inp, output: cur };
+}
+/** Builds a track's effect rack. Returns {input, output, stop()} */
+function buildRack(ctx, effects, workletOK, startAt) {
+  const inp = G(ctx), lfos = []; let cur = inp;
+  for (const e of effects) {
+    if (!e.enabled) continue;
+    const def = Plugins.get(e.pluginId); if (!def || !def.chain.length) continue;
+    const vals = {}; for (const p of def.params) vals[p.id] = e.values[p.id] ?? p.def;
+    const c = buildChain(ctx, def, vals, lfos, workletOK); cur.connect(c.input); cur = c.output;
+  }
+  const out = G(ctx); cur.connect(out);
+  for (const o of lfos) o.start(startAt ?? ctx.currentTime);
+  return { input: inp, output: out, stop() { for (const o of lfos) try { o.stop(); } catch { } } };
+}
+
+// ---------- model ----------
+const TRACK_COLORS = ['#7C5CFF', '#00D4AA', '#FF8A3D', '#FF4F8B', '#3DA9FF', '#C6E83A', '#FFC83D', '#B07CFF'];
+function newProject(name) {
+  const now = new Date().toISOString();
+  const p = { id: uid(), name: name || 'Untitled', bpm: 120, masterVolume: 0.9, created: now, modified: now, tracks: [] };
+  addTrack(p); addTrack(p);
+  return p;
+}
+function addTrack(p, name) {
+  const t = { id: uid(), name: name || `Track ${p.tracks.length + 1}`, color: TRACK_COLORS[p.tracks.length % TRACK_COLORS.length], volume: 0.8, pan: 0, mute: false, solo: false, armed: false, clips: [], effects: [] };
+  p.tracks.push(t); return t;
+}
+function projectLength(p) { let e = 0; for (const t of p.tracks) for (const c of t.clips) e = Math.max(e, c.start + c.length); return e; }
+function toFile(p) {
+  return {
+    Format: 1, Id: p.id, Name: p.name, Bpm: p.bpm, MasterVolume: p.masterVolume, Created: p.created, Modified: p.modified,
+    Tracks: p.tracks.map(t => ({
+      Id: t.id, Name: t.name, Color: t.color, Volume: t.volume, Pan: t.pan, Mute: t.mute, Solo: t.solo,
+      Clips: t.clips.map(c => ({ Id: c.id, File: c.file, Name: c.name, Start: c.start, Offset: c.offset, Length: c.length, Gain: c.gain })),
+      Effects: t.effects.map(e => ({ PluginId: e.pluginId, Enabled: e.enabled, Values: Object.entries(e.values).map(([Id, Value]) => ({ Id, Value })) })),
+    })),
+  };
+}
+function fromFile(f) {
+  const p = { id: f.Id || uid(), name: f.Name || 'Untitled', bpm: clamp(+f.Bpm || 120, 40, 240), masterVolume: f.MasterVolume ?? 0.9, created: f.Created || new Date().toISOString(), modified: f.Modified || new Date().toISOString(), tracks: [] };
+  for (const t of f.Tracks || []) p.tracks.push({
+    id: t.Id || uid(), name: t.Name || 'Track', color: t.Color || '#7C5CFF', volume: t.Volume ?? 0.8, pan: t.Pan ?? 0, mute: !!t.Mute, solo: !!t.Solo, armed: false,
+    clips: (t.Clips || []).map(c => ({ id: c.Id || uid(), file: c.File, name: c.Name || 'Clip', start: Math.max(0, +c.Start || 0), offset: Math.max(0, +c.Offset || 0), length: Math.max(0.01, +c.Length || 0.01), gain: c.Gain ?? 1 })),
+    effects: (t.Effects || []).map(e => ({ id: uid(), pluginId: e.PluginId, enabled: e.Enabled !== false, values: Object.fromEntries((e.Values || []).map(v => [v.Id, v.Value])) })),
+  });
+  return p;
+}
+function newEffect(def) { return { id: uid(), pluginId: def.id, enabled: true, values: Object.fromEntries(def.params.map(p => [p.id, p.def])) }; }
+
+// ---------- audio engine ----------
+const Engine = {
+  ctx: null, master: null, masterAn: null, workletOK: false, buffers: new Map(), peaks: new Map(), tracks: new Map(),
+  sources: [], playing: false, from: 0, startTime: 0, metroNext: 0, metroTimer: null, preview: null,
+  async init() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    this.ctx = new AC({ latencyHint: 'interactive' });
+    this.master = G(this.ctx, 0.9); this.masterAn = this.ctx.createAnalyser(); this.masterAn.fftSize = 1024;
+    this.master.connect(this.masterAn).connect(this.ctx.destination);
+    this.workletOK = await addWorklet(this.ctx);
+  },
+  resume() { if (this.ctx.state !== 'running') return this.ctx.resume().catch(() => { }); },
+  // buffers: key = clip.file within the open project
+  setBuffer(file, ab) { this.buffers.set(file, ab); this.peaks.set(file, computePeaks(ab)); },
+  toAudioBuffer(chs, sr) { const b = this.ctx.createBuffer(2, Math.max(1, chs[0].length), sr); b.copyToChannel(chs[0], 0); b.copyToChannel(chs[1] || chs[0], 1); return b; },
+  async decode(arrayBuf) {
+    const ab = await new Promise((res, rej) => { const p = this.ctx.decodeAudioData(arrayBuf.slice(0), res, rej); if (p && p.then) p.then(res, rej); });
+    return ab.numberOfChannels >= 2 ? ab : this.toAudioBuffer([ab.getChannelData(0)], ab.sampleRate);
+  },
+  // live track graph
+  buildTrack(t) {
+    const ctx = this.ctx, n = { input: G(ctx), vol: G(ctx, t.volume), pan: ctx.createStereoPanner(), mute: G(ctx), an: ctx.createAnalyser() };
+    n.an.fftSize = 1024; n.pan.pan.value = t.pan;
+    n.rack = buildRack(ctx, t.effects, this.workletOK);
+    n.input.connect(n.rack.input); n.rack.output.connect(n.vol).connect(n.pan).connect(n.mute).connect(n.an).connect(this.master);
+    this.tracks.set(t.id, n);
+  },
+  rebuildRack(t) {
+    const n = this.tracks.get(t.id); if (!n) return this.buildTrack(t);
+    n.input.disconnect(); n.rack.output.disconnect(); n.rack.stop();
+    n.rack = buildRack(this.ctx, t.effects, this.workletOK);
+    n.input.connect(n.rack.input); n.rack.output.connect(n.vol);
+  },
+  rebuildAll(p) {
+    for (const n of this.tracks.values()) { try { n.an.disconnect(); n.rack.stop(); n.input.disconnect(); } catch { } }
+    this.tracks.clear();
+    for (const t of p.tracks) this.buildTrack(t);
+    this.applyMix(p);
+  },
+  applyMix(p) {
+    const now = this.ctx.currentTime, anySolo = p.tracks.some(t => t.solo);
+    this.master.gain.setTargetAtTime(p.masterVolume, now, 0.015);
+    for (const t of p.tracks) {
+      const n = this.tracks.get(t.id); if (!n) continue;
+      n.vol.gain.setTargetAtTime(t.volume, now, 0.015);
+      n.pan.pan.setTargetAtTime(clamp(t.pan, -1, 1), now, 0.015);
+      n.mute.gain.setTargetAtTime((anySolo ? t.solo : !t.mute) ? 1 : 0, now, 0.01);
+    }
+  },
+  position() { return this.playing ? this.from + Math.max(0, this.ctx.currentTime - this.startTime) : state.playhead; },
+  posAt(ctxTime) { return this.from + (ctxTime - this.startTime); },
+  play(p, from) {
+    this.stopSources(); this.resume();
+    const ctx = this.ctx; this.from = from; this.startTime = ctx.currentTime + 0.06; this.playing = true;
+    for (const t of p.tracks) {
+      const n = this.tracks.get(t.id); if (!n) continue;
+      for (const c of t.clips) {
+        const buf = this.buffers.get(c.file); if (!buf) continue;
+        const end = c.start + c.length; if (end <= from) continue;
+        const skip = Math.max(0, from - c.start), src = ctx.createBufferSource(), g = G(ctx, c.gain);
+        src.buffer = buf; src.connect(g).connect(n.input);
+        const off = c.offset + skip, dur = c.length - skip;
+        if (off >= buf.duration) continue;
+        src.start(this.startTime + Math.max(0, c.start - from), off, Math.min(dur, buf.duration - off));
+        this.sources.push(src);
+      }
+    }
+    const beat = 60 / p.bpm; this.metroNext = Math.ceil(from / beat - 1e-6);
+    clearInterval(this.metroTimer);
+    this.metroTimer = setInterval(() => this.metroTick(p), 25); this.metroTick(p);
+  },
+  metroTick(p) {
+    if (!this.playing || !state.metronome) return;
+    const beat = 60 / p.bpm, ctx = this.ctx;
+    while (true) {
+      const t = this.startTime + this.metroNext * beat - this.from;
+      if (t > ctx.currentTime + 0.15) break;
+      if (t >= ctx.currentTime - 0.01) {
+        const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = this.metroNext % 4 === 0 ? 1600 : 1000;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+        o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + 0.06);
+      }
+      this.metroNext++;
+    }
+  },
+  stopSources() { for (const s of this.sources) try { s.stop(); s.disconnect(); } catch { } this.sources = []; },
+  stop() { const pos = this.position(); this.stopSources(); this.playing = false; clearInterval(this.metroTimer); return pos; },
+  level(an) { if (!an) return 0; const a = an._buf || (an._buf = new Float32Array(an.fftSize)); an.getFloatTimeDomainData(a); let m = 0; for (let i = 0; i < a.length; i++) { const v = Math.abs(a[i]); if (v > m) m = v; } return m; },
+  previewBuffer(buf) {
+    this.stopPreview(); this.resume();
+    const s = this.ctx.createBufferSource(); s.buffer = buf; s.connect(this.ctx.destination); s.start();
+    this.preview = s; s.onended = () => { if (this.preview === s) { this.preview = null; refreshPreviewButtons(); } };
+  },
+  stopPreview() { if (this.preview) { try { this.preview.stop(); } catch { } this.preview = null; } },
+  async render(p, onProgress) {
+    const sr = this.ctx.sampleRate, len = projectLength(p);
+    if (len <= 0) throw new Error('The project is empty.');
+    const tail = 2.5, octx = new OfflineAudioContext(2, Math.ceil((len + tail) * sr), sr);
+    const wok = await addWorklet(octx);
+    const master = G(octx, p.masterVolume); master.connect(octx.destination);
+    const anySolo = p.tracks.some(t => t.solo);
+    for (const t of p.tracks) {
+      if (anySolo ? !t.solo : t.mute) continue;
+      const input = G(octx), rack = buildRack(octx, t.effects, wok, 0), vol = G(octx, t.volume), pan = octx.createStereoPanner(); pan.pan.value = t.pan;
+      input.connect(rack.input); rack.output.connect(vol).connect(pan).connect(master);
+      for (const c of t.clips) {
+        const buf = this.buffers.get(c.file); if (!buf || c.offset >= buf.duration) continue;
+        const src = octx.createBufferSource(), g = G(octx, c.gain); src.buffer = buf; src.connect(g).connect(input);
+        src.start(c.start, c.offset, Math.min(c.length, buf.duration - c.offset));
+      }
+    }
+    let timer = onProgress && setInterval(() => onProgress(Math.min(0.99, octx.currentTime / (len + tail))), 200);
+    try { const out = await octx.startRendering(); return out; } finally { clearInterval(timer); }
+  },
+};
+function computePeaks(ab) {
+  const bin = 256, L = ab.getChannelData(0), R = ab.numberOfChannels > 1 ? ab.getChannelData(1) : L, n = Math.ceil(L.length / bin), mn = new Float32Array(n), mx = new Float32Array(n);
+  for (let b = 0; b < n; b++) { let lo = 0, hi = 0; const e = Math.min(L.length, (b + 1) * bin); for (let i = b * bin; i < e; i++) { const v = (L[i] + R[i]) * 0.5; if (v < lo) lo = v; if (v > hi) hi = v; } mn[b] = lo; mx[b] = hi; }
+  return { bin, sr: ab.sampleRate, mn, mx };
+}
+async function storeAudio(projectId, file, ab) {
+  await DB.put('audio', projectId + '/' + file, { sr: ab.sampleRate, ch: [ab.getChannelData(0).slice(), ab.getChannelData(1).slice()] });
+}
+async function loadAudio(projectId, file) {
+  const rec = await DB.get('audio', projectId + '/' + file);
+  return rec ? Engine.toAudioBuffer(rec.ch, rec.sr) : null;
+}
+
+// ---------- app state ----------
+const ROW_H = 96, RULER_H = 28, MAX_FX = 8;
+const state = {
+  page: 'home', project: null, selTrack: null, selClip: null, playhead: 0, pps: 60, metronome: false, panel: 'mixer', collapsed: false,
+  moveMode: false, recording: null, undo: [], redo: [], dirty: false, soundFilter: 'All', soundSearch: '', fxTrack: null,
+};
+const P = () => state.project;
+const trackById = id => P()?.tracks.find(t => t.id === id);
+function clipById(id) { for (const t of P()?.tracks || []) { const c = t.clips.find(c => c.id === id); if (c) return { clip: c, track: t }; } return null; }
+
+// undo / save
+const snapshot = () => JSON.stringify(toFile(P()));
+function pushUndo(snap) { state.undo.push(snap || snapshot()); if (state.undo.length > 60) state.undo.shift(); state.redo = []; }
+function edit(fn, opts = {}) {
+  pushUndo(); fn(); changed(opts);
+}
+function changed({ structure = true, mix = false, rack = null, restart = true } = {}) {
+  if (rack) Engine.rebuildRack(rack);
+  if (mix || structure) Engine.applyMix(P());
+  if (structure && restart && Engine.playing && !state.recording) Engine.play(P(), Engine.stop());
+  scheduleSave(); markTimeline(); renderStudioParts();
+}
+function restoreSnap(snap) {
+  const old = P(); const p = fromFile(JSON.parse(snap)); p.id = old.id;
+  for (const t of p.tracks) { const o = old.tracks.find(x => x.id === t.id); if (o) t.armed = o.armed; }
+  state.project = p; Engine.rebuildAll(p);
+  if (!trackById(state.selTrack)) state.selTrack = p.tracks[0]?.id || null;
+  if (!clipById(state.selClip)) state.selClip = null;
+  if (Engine.playing && !state.recording) Engine.play(p, Engine.stop());
+  scheduleSave(); markTimeline(); renderStudio();
+}
+function undo() { if (!state.undo.length) return toast('Nothing to undo'); state.redo.push(snapshot()); restoreSnap(state.undo.pop()); }
+function redo() { if (!state.redo.length) return toast('Nothing to redo'); state.undo.push(snapshot()); restoreSnap(state.redo.pop()); }
+let saveTimer = null;
+function scheduleSave() { state.dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveProject, 1200); }
+async function saveProject() {
+  clearTimeout(saveTimer);
+  const p = P(); if (!p || !state.dirty) return;
+  state.dirty = false; p.modified = new Date().toISOString();
+  try { await DB.put('projects', p.id, toFile(p)); } catch (e) { state.dirty = true; toast('Could not save: ' + e.message, true); }
+}
+setInterval(saveProject, 60000);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveProject(); });
+window.addEventListener('pagehide', saveProject);
+
+// ---------- dialogs & menus ----------
+function modal(build) {
+  return new Promise(res => {
+    const prev = document.activeElement;
+    const back = h('div', { id: 'modalBack' });
+    const close = v => { back.remove(); try { prev && prev.focus(); } catch { } res(v); };
+    back.addEventListener('mousedown', e => { if (e.target === back) close(null); });
+    back._close = close;
+    back.append(build(close)); document.body.append(back);
+    setTimeout(() => { const f = back.querySelector('input,[autofocus],button'); f && f.focus(); f && f.select && f.select(); }, 0);
+  });
+}
+function askText(title, value = '', ok = 'OK') {
+  return modal(close => {
+    const inp = h('input', { type: 'text', value, maxlength: 80, onkeydown: e => { if (e.key === 'Enter') close(inp.value.trim() || null); } });
+    return h('div', { class: 'modal' }, h('h3', null, title), inp, h('div', { class: 'acts' }, h('button', { onclick: () => close(null) }, 'Cancel'), h('button', { class: 'primary', onclick: () => close(inp.value.trim() || null) }, ok)));
+  });
+}
+function confirmBox(title, text, ok = 'Delete') {
+  return modal(close => h('div', { class: 'modal' }, h('h3', null, title), text && h('div', { class: 'dim' }, text),
+    h('div', { class: 'acts' }, h('button', { onclick: () => close(false) }, 'Cancel'), h('button', { class: 'primary', autofocus: true, onclick: () => close(true) }, ok))));
+}
+function pickColor(current) {
+  return modal(close => h('div', { class: 'modal' }, h('h3', null, 'Track color'),
+    h('div', { class: 'swatches' }, TRACK_COLORS.concat(['#FF3B5C', '#9A9AAE']).map(c => h('button', { style: { background: c, outline: c === current ? '2px solid #fff' : '' }, 'aria-label': c, onclick: () => close(c) }))),
+    h('div', { class: 'acts' }, h('button', { onclick: () => close(null) }, 'Cancel'))));
+}
+function showMenu(anchor, items) {
+  closeMenu();
+  const prev = document.activeElement;
+  const m = h('div', { id: 'menu', role: 'menu' }, items.filter(Boolean).map(it => it === '-' ? h('hr') :
+    h('button', { class: it.danger ? 'danger' : '', disabled: it.disabled, onclick: () => { closeMenu(); it.action(); } }, it.label)));
+  m._prev = prev;
+  document.body.append(m);
+  let x, y;
+  if (anchor && anchor.getBoundingClientRect) { const r = anchor.getBoundingClientRect(); x = r.left; y = r.bottom + 4; } else { x = anchor.x; y = anchor.y; }
+  const mr = m.getBoundingClientRect();
+  m.style.left = clamp(x, 8, innerWidth - mr.width - 8) + 'px'; m.style.top = (y + mr.height > innerHeight - 8 ? Math.max(8, y - mr.height - 8) : y) + 'px';
+  m.querySelector('button:not(:disabled)')?.focus();
+  setTimeout(() => document.addEventListener('mousedown', menuOutside, true), 0);
+}
+function menuOutside(e) { if (!e.target.closest('#menu')) closeMenu(); }
+function closeMenu(restore) {
+  const m = $('#menu'); if (!m) return false;
+  document.removeEventListener('mousedown', menuOutside, true); m.remove(); if (restore && m._prev) try { m._prev.focus(); } catch { }
+  return true;
+}
+
+// ---------- navigation ----------
+function go(page) {
+  if (state.page === 'studio' && page !== 'studio') leaveStudio();
+  state.page = page;
+  $$('#nav .tab').forEach(b => b.classList.toggle('active', b.dataset.page === page || (page === 'studio' && b.dataset.page === 'home')));
+  const main = $('#main'); main.innerHTML = '';
+  Promise.resolve(({ home: renderHome, plugins: renderPlugins, files: renderFiles, studio: renderStudio })[page]()).then(() => {
+    if (state.page === page && !main.contains(document.activeElement) && !$('#modalBack') && !$('#menu'))
+      (page === 'studio' ? $('#tlscroll') : main.querySelector('.card') || main.querySelector('button, input, [tabindex="0"]'))?.focus({ preventScroll: true });
+  });
+}
+$$('#nav .tab').forEach(b => b.onclick = () => go(b.dataset.page));
+function leaveStudio() {
+  if (state.recording) stopRecording();
+  if (Engine.playing) Engine.stop();
+  Engine.stopPreview(); saveProject();
+  state.project = null; state.undo = []; state.redo = []; Engine.buffers.clear(); Engine.peaks.clear(); Engine.rebuildAll({ tracks: [], masterVolume: 0.9 });
+}
+
+// ---------- Home (projects) ----------
+async function listProjects() {
+  const all = (await DB.all('projects')).map(([, f]) => f).filter(Boolean);
+  return all.sort((a, b) => String(b.Modified).localeCompare(String(a.Modified)));
+}
+async function renderHome() {
+  const main = $('#main'), page = h('div', { class: 'page' });
+  main.append(page);
+  const projects = await listProjects();
+  if (state.page !== 'home') return;
+  page.append(
+    h('div', { class: 'row' }, h('div', { class: 'grow' }, h('h1', null, 'Projects'), h('div', { class: 'dim' }, 'Your songs are saved in this browser automatically.')),
+      h('button', { 'data-k': 'imp-proj', onclick: importProjectFlow }, 'Import .yproj'),
+      h('button', { class: 'primary', 'data-k': 'new-proj', onclick: async () => { const n = await askText('New project', 'My song', 'Create'); if (n) { const p = newProject(n); await DB.put('projects', p.id, toFile(p)); openProject(p.id); } } }, '+ New project')),
+    projects.length ? h('div', { class: 'cards' }, projects.map(f => {
+      const clips = (f.Tracks || []).reduce((a, t) => a + (t.Clips || []).length, 0);
+      const card = h('button', { class: 'card', 'data-k': 'proj-' + f.Id, onclick: () => openProject(f.Id), oncontextmenu: e => { e.preventDefault(); projectMenu(e.currentTarget, f); }, onkeydown: e => { if (e.key === 'ContextMenu' || e.key === 'm' || e.key === 'M') { e.preventDefault(); projectMenu(card, f); } } },
+        h('div', { class: 'bar', style: { background: (f.Tracks?.[0]?.Color) || 'var(--accent)' } }),
+        h('div', { class: 'title' }, f.Name),
+        h('div', { class: 'dim small' }, `${(f.Tracks || []).length} tracks · ${clips} clips · ${Math.round(f.Bpm)} BPM`),
+        h('div', { class: 'dim small' }, 'Edited ' + fmtDate(f.Modified)),
+        h('div', { class: 'dim small', style: { marginTop: '6px', textAlign: 'right' } }, 'Right-click, M or Menu button for options'));
+      card._menu = () => projectMenu(card, f);
+      return card;
+    })) : h('div', { class: 'empty' }, h('div', { style: { fontSize: '40px' } }, '🎛️'), h('p', null, 'No projects yet. Create one to start making music.')),
+    h('h2', null, 'Controls'),
+    h('div', { id: 'help', class: 'dim' },
+      'Works with mouse, keyboard, touch and game controllers. ',
+      h('kbd', null, 'Space'), ' / ', h('kbd', null, 'X'), ' play · ', h('kbd', null, 'R'), ' / ', h('kbd', null, 'Y'), ' record · ',
+      h('kbd', null, 'PgUp'), h('kbd', null, 'PgDn'), ' / ', h('kbd', null, 'LB'), h('kbd', null, 'RB'), ' jump a bar · ',
+      h('kbd', null, '+'), h('kbd', null, '−'), ' / ', h('kbd', null, 'LT'), h('kbd', null, 'RT'), ' zoom · ', h('kbd', null, 'Home'), ' to start · ',
+      h('kbd', null, 'Delete'), ' clip · ', h('kbd', null, 'Ctrl+Z'), ' undo · ', h('kbd', null, 'Ctrl+Y'), ' redo · ', h('kbd', null, 'Ctrl+S'), ' save · ',
+      h('kbd', null, 'View'), ' switch panel · ', h('kbd', null, 'M'), ' / ', h('kbd', null, 'Menu'), ' clip menu. ',
+      'On a selected clip press ', h('kbd', null, 'Enter'), ' / ', h('kbd', null, 'A'), ' for move mode, then arrows / D-pad.'));
+}
+function projectMenu(anchor, f) {
+  showMenu(anchor, [
+    { label: 'Open', action: () => openProject(f.Id) },
+    { label: 'Rename', action: async () => { const n = await askText('Rename project', f.Name, 'Rename'); if (n) { f.Name = n; f.Modified = new Date().toISOString(); await DB.put('projects', f.Id, f); go('home'); } } },
+    { label: 'Duplicate', action: async () => { await duplicateProject(f); go('home'); } },
+    { label: 'Export .yproj', action: () => exportProject(f) },
+    '-',
+    { label: 'Delete', danger: true, action: async () => { if (await confirmBox(`Delete "${f.Name}"?`, 'This removes the project and its audio from this browser.')) { await deleteProject(f); go('home'); } } },
+  ]);
+}
+async function deleteProject(f) {
+  await DB.del('projects', f.Id);
+  for (const k of await DB.keys('audio')) if (String(k).startsWith(f.Id + '/')) await DB.del('audio', k);
+}
+async function duplicateProject(f) {
+  const id = uid(), copy = JSON.parse(JSON.stringify(f)); copy.Id = id; copy.Name = f.Name + ' copy'; copy.Created = copy.Modified = new Date().toISOString();
+  for (const k of await DB.keys('audio')) if (String(k).startsWith(f.Id + '/')) await DB.put('audio', id + k.slice(f.Id.length), await DB.get('audio', k));
+  await DB.put('projects', id, copy);
+}
+async function exportProject(f) {
+  toast('Packing project…');
+  const files = new Set(); for (const t of f.Tracks || []) for (const c of t.Clips || []) files.add(c.File);
+  const entries = [['project.json', JSON.stringify(f, null, 1)]];
+  for (const file of files) { const rec = await DB.get('audio', f.Id + '/' + file); if (rec) entries.push(['audio/' + file, await encodeWav(rec.ch, rec.sr).arrayBuffer()]); }
+  download(zip(entries), safeName(f.Name) + '.yproj');
+}
+async function importProjectFlow() { const files = await pickFiles({ accept: '.yproj,.zip' }); for (const f of files) await importProject(f); }
+async function importProject(file) {
+  try {
+    const entries = await unzip(await file.arrayBuffer());
+    if (!entries.has('project.json')) throw new Error('This file has no project.json.');
+    const f = JSON.parse(new TextDecoder().decode(entries.get('project.json')));
+    f.Id = uid(); f.Modified = new Date().toISOString(); f.Name = f.Name || file.name.replace(/\.[^.]+$/, '');
+    let missing = 0;
+    for (const t of f.Tracks || []) for (const c of t.Clips || []) {
+      const data = entries.get('audio/' + c.File);
+      if (!data) { missing++; continue; }
+      if (await DB.get('audio', f.Id + '/' + c.File)) continue;
+      try { await storeAudio(f.Id, c.File, await Engine.decode(data)); } catch { missing++; }
+    }
+    await DB.put('projects', f.Id, f);
+    toast(`Imported "${f.Name}"` + (missing ? ` (${missing} clip${missing > 1 ? 's' : ''} missing audio)` : ''));
+    if (state.page === 'home') go('home');
+  } catch (e) { toast(file.name + ': ' + e.message, true); }
+}
+
+// ---------- open project / studio ----------
+async function openProject(id) {
+  const f = await DB.get('projects', id); if (!f) return toast('Project not found', true);
+  Engine.resume();
+  if (state.page === 'studio') leaveStudio();
+  const p = fromFile(f); p.id = id;
+  Engine.buffers.clear(); Engine.peaks.clear();
+  const files = new Set(); for (const t of p.tracks) for (const c of t.clips) files.add(c.file);
+  let missing = 0;
+  for (const file of files) { const ab = await loadAudio(id, file).catch(() => null); if (ab) Engine.setBuffer(file, ab); else missing++; }
+  if (missing) toast(`${missing} audio file${missing > 1 ? 's are' : ' is'} missing`, true);
+  Object.assign(state, { project: p, selTrack: p.tracks[0]?.id || null, selClip: null, playhead: 0, undo: [], redo: [], moveMode: false, dirty: false, fxTrack: null });
+  state.panel = projectLength(p) > 0 ? 'mixer' : 'sounds';
+  Engine.rebuildAll(p);
+  go('studio');
+}
+
+function renderStudio() {
+  const main = $('#main');
+  const fk = document.activeElement?.dataset?.k;
+  let st = $('#studio');
+  const keepScroll = st ? [$('#tlscroll').scrollLeft, $('#tlscroll').scrollTop] : null;
+  main.innerHTML = '';
+  const p = P(); if (!p) return;
+  st = h('div', { id: 'studio' },
+    h('div', { id: 'transport' }),
+    h('div', { id: 'tl' },
+      h('div', { id: 'heads' }, h('div', { id: 'headsInner' })),
+      h('div', { id: 'tlview' }, h('canvas', { id: 'tlcanvas' }), h('div', { id: 'tlscroll', tabindex: '0', 'data-k': 'timeline', 'aria-label': 'Timeline' }, h('div', { id: 'tlspacer' })))),
+    h('div', { id: 'panel', class: state.collapsed ? 'collapsed' : '' }, h('div', { id: 'ptabs' }), h('div', { id: 'pbody' })));
+  main.append(st);
+  setupTimeline();
+  renderStudioParts();
+  if (keepScroll) { $('#tlscroll').scrollLeft = keepScroll[0]; $('#tlscroll').scrollTop = keepScroll[1]; }
+  if (fk) $(`[data-k="${CSS.escape(fk)}"]`)?.focus({ preventScroll: true });
+}
+function renderStudioParts() {
+  if (state.page !== 'studio' || !$('#studio')) return;
+  const fk = document.activeElement?.dataset?.k;
+  renderTransport(); renderHeads(); renderPanel(); sizeTimeline();
+  if (fk && !document.activeElement?.isConnected) $(`[data-k="${CSS.escape(fk)}"]`)?.focus({ preventScroll: true });
+}
+
+// transport
+function renderTransport() {
+  const p = P(), el = $('#transport'); el.innerHTML = '';
+  el.append(
+    h('button', { class: 'ghost', title: 'Back to projects (B)', 'data-k': 'tp-back', onclick: () => go('home') }, '←'),
+    h('button', { class: 'ghost', id: 'projname', title: 'Rename project', 'data-k': 'tp-name', onclick: async () => { const n = await askText('Rename project', p.name, 'Rename'); if (n) edit(() => p.name = n, { structure: false }); } }, p.name),
+    h('div', { class: 'sep' }),
+    h('button', { class: 'big', title: 'Go to start (Home)', 'data-k': 'tp-home', onclick: () => seek(0) }, '⏮'),
+    h('button', { class: 'big', id: 'playBtn', title: 'Play / pause (Space, X)', 'data-k': 'tp-play', onclick: togglePlay }, Engine.playing ? '⏸' : '▶'),
+    h('button', { class: 'big rec' + (state.recording ? ' on' : ''), id: 'recBtn', title: 'Record (R, Y)', 'data-k': 'tp-rec', onclick: toggleRecord }, '●'),
+    h('div', { id: 'clock' }, '1.1.000', h('small', null, '0:00.0')),
+    h('label', { class: 'row small dim', title: 'Tempo (40–240 BPM)' }, 'BPM', h('input', {
+      type: 'number', min: 40, max: 240, step: 1, value: Math.round(p.bpm * 10) / 10, 'data-k': 'tp-bpm',
+      onchange: e => { const v = clamp(+e.target.value || 120, 40, 240); edit(() => p.bpm = v); },
+    })),
+    h('button', { class: state.metronome ? 'on' : '', title: 'Metronome', 'data-k': 'tp-metro', onclick: () => { state.metronome = !state.metronome; renderTransport(); } }, '♩ Click'),
+    h('div', { class: 'sep' }),
+    h('button', { title: 'Zoom out (−, LT)', 'data-k': 'tp-zo', onclick: () => zoom(1 / 1.4) }, '−'),
+    h('button', { title: 'Zoom in (+, RT)', 'data-k': 'tp-zi', onclick: () => zoom(1.4) }, '+'),
+    h('button', { title: 'Undo (Ctrl+Z)', 'data-k': 'tp-undo', disabled: !state.undo.length, onclick: undo }, '↶'),
+    h('button', { title: 'Redo (Ctrl+Y)', 'data-k': 'tp-redo', disabled: !state.redo.length, onclick: redo }, '↷'),
+    h('div', { class: 'grow' }),
+    h('label', { class: 'row small dim', title: 'Master volume' }, 'Master', h('input', { type: 'range', min: 0, max: 1.2, step: 0.01, value: p.masterVolume, style: { width: '90px' }, 'data-k': 'tp-master', ...sliderHandlers(v => { p.masterVolume = v; Engine.applyMix(p); }) })),
+    h('div', { class: 'meterbar', style: { width: '60px' } }, h('div', { id: 'masterMeter', style: { width: '0' } })),
+    h('button', { class: 'primary', title: 'Export mixdown to WAV', 'data-k': 'tp-export', onclick: exportMix }, '⤓ Export'),
+  );
+  updateClock();
+}
+function sliderHandlers(onInput) {
+  let pending = null;
+  return {
+    onpointerdown: () => { pending = pending || snapshot(); },
+    onkeydown: () => { pending = pending || snapshot(); },
+    oninput: e => { pending = pending || snapshot(); onInput(+e.target.value, e.target); },
+    onchange: () => { if (pending) { pushUndo(pending); pending = null; scheduleSave(); const u = $('[data-k="tp-undo"]'); if (u) u.disabled = false; } },
+  };
+}
+function fmtBars(t, bpm) { const beat = 60 / bpm, beats = t / beat, bar = Math.floor(beats / 4) + 1, b = Math.floor(beats % 4) + 1, tick = Math.floor((beats % 1) * 1000); return `${bar}.${b}.${String(tick).padStart(3, '0')}`; }
+function fmtTime(t) { const m = Math.floor(t / 60), s = t - m * 60; return `${m}:${s.toFixed(1).padStart(4, '0')}`; }
+function updateClock() { const c = $('#clock'); if (!c || !P()) return; const t = Engine.position(); c.firstChild.nodeValue = fmtBars(t, P().bpm); c.lastChild.textContent = fmtTime(t); }
+
+// track headers
+function renderHeads() {
+  const p = P(), inner = $('#headsInner'); inner.innerHTML = '';
+  for (const t of p.tracks) {
+    const sel = t.id === state.selTrack;
+    inner.append(h('div', { class: 'th' + (sel ? ' sel' : ''), onmousedown: () => selectTrack(t.id), oncontextmenu: e => { e.preventDefault(); trackMenu(e, t); } },
+      h('div', { class: 'col', style: { background: t.color } }),
+      h('div', { class: 'body' },
+        h('div', { class: 'row', style: { gap: '4px' } },
+          h('button', { class: 'tname', title: 'Track menu', 'data-k': 'tn-' + t.id, onclick: e => { selectTrack(t.id); trackMenu(e.currentTarget, t); } }, t.name),
+          h('button', { class: 'tbtn m' + (t.mute ? ' on' : ''), title: 'Mute', 'data-k': 'tm-' + t.id, onclick: () => edit(() => t.mute = !t.mute, { structure: false, mix: true }) }, 'M'),
+          h('button', { class: 'tbtn s' + (t.solo ? ' on' : ''), title: 'Solo', 'data-k': 'ts-' + t.id, onclick: () => edit(() => t.solo = !t.solo, { structure: false, mix: true }) }, 'S'),
+          h('button', { class: 'tbtn r' + (t.armed ? ' on' : ''), title: 'Arm for recording', 'data-k': 'tr-' + t.id, onclick: () => armTrack(t) }, h('span', { class: 'dot' }))),
+        h('input', { type: 'range', min: 0, max: 1.2, step: 0.01, value: t.volume, title: 'Volume', 'data-k': 'tv-' + t.id, ...sliderHandlers(v => { t.volume = v; Engine.applyMix(p); syncStrip(t); }) }),
+        h('div', { class: 'row small dim', style: { justifyContent: 'space-between' } }, h('span', { 'data-db': t.id }, fmtDb(t.volume)), h('span', null, `${t.clips.length} clip${t.clips.length === 1 ? '' : 's'}${t.effects.length ? ' · ' + t.effects.length + ' fx' : ''}`)),
+        h('div', { class: 'hmeter' }, h('div', { 'data-meter': t.id }))),
+    ));
+  }
+  inner.append(h('button', { id: 'addTrack', 'data-k': 'add-track', onclick: () => edit(() => { const t = addTrack(p); Engine.buildTrack(t); Engine.applyMix(p); state.selTrack = t.id; }) }, '+ Track'));
+}
+function syncStrip(t) { for (const el of $$(`[data-db="${t.id}"]`)) el.textContent = fmtDb(t.volume); for (const el of $$(`[data-k="tv-${t.id}"],[data-k="mv-${t.id}"]`)) if (el !== document.activeElement) el.value = t.volume; }
+function selectTrack(id) { if (state.selTrack === id) return; state.selTrack = id; markTimeline(); renderStudioParts(); }
+function armTrack(t) { const on = !t.armed; for (const x of P().tracks) x.armed = false; t.armed = on; state.selTrack = t.id; renderStudioParts(); markTimeline(); }
+function trackMenu(anchor, t) {
+  const p = P();
+  showMenu(anchor, [
+    { label: 'Rename', action: async () => { const n = await askText('Rename track', t.name, 'Rename'); if (n) edit(() => t.name = n, { structure: false }); } },
+    { label: 'Change color', action: async () => { const c = await pickColor(t.color); if (c) edit(() => t.color = c, { structure: false }); } },
+    { label: 'Effects…', action: () => { state.selTrack = t.id; setPanel('effects'); } },
+    { label: 'Arm for recording', action: () => armTrack(t) },
+    { label: 'Add track below', action: () => edit(() => { const n = addTrack(p); p.tracks.splice(p.tracks.indexOf(n), 1); p.tracks.splice(p.tracks.indexOf(t) + 1, 0, n); Engine.buildTrack(n); state.selTrack = n.id; }) },
+    '-',
+    { label: 'Delete track', danger: true, action: async () => { if (!t.clips.length || await confirmBox(`Delete "${t.name}"?`, `It has ${t.clips.length} clip(s). You can undo this.`)) edit(() => { p.tracks.splice(p.tracks.indexOf(t), 1); const n = Engine.tracks.get(t.id); if (n) { n.an.disconnect(); n.rack.stop(); Engine.tracks.delete(t.id); } if (state.selTrack === t.id) state.selTrack = p.tracks[0]?.id || null; state.selClip = null; }); } },
+  ]);
+}
+
+// bottom panel
+function setPanel(name) { state.panel = name; state.collapsed = false; $('#panel')?.classList.remove('collapsed'); renderPanel(); }
+function cyclePanel() { const order = ['mixer', 'effects', 'sounds']; setPanel(order[(order.indexOf(state.panel) + 1) % 3]); $(`[data-k="pt-${state.panel}"]`)?.focus(); }
+function renderPanel() {
+  const tabs = $('#ptabs'), body = $('#pbody'); if (!tabs) return;
+  tabs.innerHTML = '';
+  for (const [k, label] of [['mixer', 'Mixer'], ['effects', 'Effects'], ['sounds', 'Sounds']])
+    tabs.append(h('button', { class: 'tab' + (state.panel === k ? ' active' : ''), 'data-k': 'pt-' + k, onclick: () => setPanel(k) }, label));
+  tabs.append(h('span', { class: 'grow' }), h('span', { class: 'dim small hint' }, 'View button switches panel'),
+    h('button', { class: 'ghost', title: state.collapsed ? 'Show panel' : 'Hide panel', 'data-k': 'pt-collapse', onclick: () => { state.collapsed = !state.collapsed; $('#panel').classList.toggle('collapsed', state.collapsed); renderPanel(); sizeTimeline(); } }, state.collapsed ? '▲' : '▼'));
+  body.innerHTML = '';
+  if (state.collapsed) return;
+  ({ mixer: renderMixer, effects: renderEffects, sounds: renderSounds })[state.panel](body);
+}
+function renderMixer(body) {
+  const p = P(), strips = h('div', { class: 'strips' });
+  for (const t of p.tracks) strips.append(h('div', { class: 'strip' + (t.id === state.selTrack ? ' sel' : ''), onmousedown: () => selectTrack(t.id) },
+    h('div', { class: 'cbar', style: { background: t.color } }), h('div', { class: 'sname', title: t.name }, t.name),
+    h('div', { class: 'fader' },
+      h('input', { class: 'v', type: 'range', min: 0, max: 1.2, step: 0.01, value: t.volume, title: 'Volume', 'aria-label': t.name + ' volume', 'data-k': 'mv-' + t.id, ...sliderHandlers(v => { t.volume = v; Engine.applyMix(p); syncStrip(t); }) }),
+      h('div', { class: 'vmeter' }, h('div', { 'data-vmeter': t.id }))),
+    h('div', { class: 'small dim', 'data-db': t.id }, fmtDb(t.volume)),
+    h('input', { class: 'p', type: 'range', min: -1, max: 1, step: 0.01, value: t.pan, title: 'Pan', 'aria-label': t.name + ' pan', 'data-k': 'mp-' + t.id, ...sliderHandlers((v, el) => { t.pan = Math.abs(v) < 0.04 ? 0 : v; Engine.applyMix(p); el.nextSibling.textContent = 'Pan ' + fmtPan(t.pan); }) }),
+    h('div', { class: 'small dim' }, 'Pan ' + fmtPan(t.pan)),
+    h('div', { class: 'row', style: { gap: '4px' } },
+      h('button', { class: 'tbtn m' + (t.mute ? ' on' : ''), 'data-k': 'mm-' + t.id, onclick: () => edit(() => t.mute = !t.mute, { structure: false, mix: true }) }, 'M'),
+      h('button', { class: 'tbtn s' + (t.solo ? ' on' : ''), 'data-k': 'ms-' + t.id, onclick: () => edit(() => t.solo = !t.solo, { structure: false, mix: true }) }, 'S'),
+      h('button', { class: 'tbtn', style: { width: 'auto', padding: '0 6px' }, title: 'Effects', 'data-k': 'mf-' + t.id, onclick: () => { state.selTrack = t.id; setPanel('effects'); } }, 'FX' + (t.effects.length ? ' ' + t.effects.length : '')))));
+  strips.append(h('div', { class: 'strip', style: { borderColor: 'var(--line)' } },
+    h('div', { class: 'cbar', style: { background: '#fff' } }), h('div', { class: 'sname' }, 'Master'),
+    h('div', { class: 'fader' },
+      h('input', { class: 'v', type: 'range', min: 0, max: 1.2, step: 0.01, value: p.masterVolume, 'aria-label': 'Master volume', 'data-k': 'mv-master', ...sliderHandlers((v, el) => { p.masterVolume = v; Engine.applyMix(p); el.closest('.strip').querySelector('.small').textContent = fmtDb(v); const tm = $('[data-k="tp-master"]'); if (tm) tm.value = v; }) }),
+      h('div', { class: 'vmeter' }, h('div', { 'data-vmeter': 'master' }))),
+    h('div', { class: 'small dim' }, fmtDb(p.masterVolume))));
+  body.append(strips);
+}
+function fmtParam(v, unit) {
+  if (unit === '%') return Math.round(v * 100) + ' %';
+  if (unit === 'Hz') return v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 1 : 2) + ' kHz' : Math.round(v) + ' Hz';
+  const n = Math.abs(v) >= 100 ? v.toFixed(0) : Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(2);
+  return (n.includes('.') ? n.replace(/\.?0+$/, '') : n) + (unit ? ' ' + unit : '');
+}
+const toPos = (p, v) => p.curve === 'log' ? Math.log(v / p.min) / Math.log(p.max / p.min) * 1000 : (v - p.min) / (p.max - p.min) * 1000;
+const fromPos = (p, x) => p.curve === 'log' ? p.min * Math.pow(p.max / p.min, x / 1000) : p.min + (p.max - p.min) * x / 1000;
+let rackRaf = 0;
+function rebuildRackSoon(t) { cancelAnimationFrame(rackRaf); rackRaf = requestAnimationFrame(() => Engine.rebuildRack(t)); }
+function renderEffects(body) {
+  const t = trackById(state.selTrack);
+  if (!t) { body.append(h('div', { class: 'empty' }, 'Select a track to edit its effects.')); return; }
+  const defs = Plugins.effects();
+  const add = h('select', { 'data-k': 'fx-add', style: { width: '100%' }, disabled: t.effects.length >= MAX_FX, onchange: e => { const d = Plugins.get(e.target.value); e.target.value = ''; if (d) edit(() => t.effects.push(newEffect(d)), { structure: false, rack: t }); } },
+    h('option', { value: '' }, t.effects.length >= MAX_FX ? `Limit of ${MAX_FX} effects` : '+ Add effect…'),
+    defs.map(d => h('option', { value: d.id }, `${d.name} — ${d.category}${d.builtIn ? '' : ' (plugin)'}`)));
+  body.append(h('div', { class: 'fxcards' },
+    h('div', { style: { width: '170px', flex: 'none' } }, h('div', { class: 'row', style: { gap: '6px', marginBottom: '8px' } }, h('span', { style: { width: '10px', height: '10px', borderRadius: '3px', background: t.color } }), h('b', null, t.name)),
+      h('div', { class: 'dim small', style: { marginBottom: '8px' } }, `${t.effects.length} / ${MAX_FX} effects, top to bottom.`), add),
+    t.effects.length ? null : h('div', { class: 'empty' }, 'No effects on this track yet.'),
+    t.effects.map((e, i) => {
+      const d = Plugins.get(e.pluginId);
+      const head = h('div', { class: 'fxhead' },
+        h('span', { class: 'n', title: d ? d.name : e.pluginId }, d ? d.name : e.pluginId),
+        h('button', { class: e.enabled ? 'on' : '', title: e.enabled ? 'On (click to bypass)' : 'Bypassed', 'data-k': `fx-on-${e.id}`, onclick: () => edit(() => e.enabled = !e.enabled, { structure: false, rack: t }) }, e.enabled ? 'On' : 'Off'),
+        h('button', { title: 'Move left', disabled: i === 0, 'data-k': `fx-l-${e.id}`, onclick: () => edit(() => { t.effects.splice(i, 1); t.effects.splice(i - 1, 0, e); }, { structure: false, rack: t }) }, '‹'),
+        h('button', { title: 'Move right', disabled: i === t.effects.length - 1, 'data-k': `fx-r-${e.id}`, onclick: () => edit(() => { t.effects.splice(i, 1); t.effects.splice(i + 1, 0, e); }, { structure: false, rack: t }) }, '›'),
+        h('button', { title: 'Remove', 'data-k': `fx-x-${e.id}`, onclick: () => edit(() => t.effects.splice(i, 1), { structure: false, rack: t }) }, '✕'));
+      if (!d) return h('div', { class: 'fx off' }, head, h('div', { class: 'dim small' }, 'Plugin not installed. Audio passes through unchanged. Install it from the Plugins page.'));
+      return h('div', { class: 'fx' + (e.enabled ? '' : ' off') }, head, h('div', { class: 'dim small' }, d.category),
+        d.params.map(pr => {
+          const v = e.values[pr.id] ?? pr.def, val = h('span', { class: 'dim' }, fmtParam(v, pr.unit));
+          return h('label', { class: 'prm' }, h('span', null, pr.name), val,
+            h('input', { type: 'range', min: 0, max: 1000, step: 1, value: toPos(pr, v), 'data-k': `fx-p-${e.id}-${pr.id}`, 'aria-label': pr.name, ...sliderHandlers(x => { const nv = fromPos(pr, x); e.values[pr.id] = nv; val.textContent = fmtParam(nv, pr.unit); rebuildRackSoon(t); }) }));
+        }));
+    })));
+}
+// sounds
+let soundCache = new Map();
+function allSounds() {
+  const list = [...BUILTIN_SOUNDS];
+  for (const [, pl] of Plugins.installed) for (const s of pl.def.sounds) list.push({ name: s.name, category: s.category, bpm: s.bpm, source: pl.def.name, key: pl.def.id + ':' + s.file, data: () => pl.files[s.file] });
+  for (const it of libraryCache) list.push({ name: it.name.replace(/\.[^.]+$/, ''), category: 'My audio', bpm: 0, source: 'Files', key: 'lib:' + it.id, data: () => DB.get('library', it.id).then(r => r?.data) });
+  return list;
+}
+let libraryCache = [];
+async function refreshLibrary() { libraryCache = (await DB.all('library')).map(([id, r]) => ({ id, name: r.name, size: r.size, added: r.added })).sort((a, b) => a.name.localeCompare(b.name)); }
+async function soundBuffer(s) {
+  const key = s.key || 'builtin:' + s.name + ':' + Engine.ctx.sampleRate;
+  if (soundCache.has(key)) return soundCache.get(key);
+  let ab;
+  if (s.gen) ab = Engine.toAudioBuffer(s.gen(Engine.ctx.sampleRate), Engine.ctx.sampleRate);
+  else { const data = await s.data(); if (!data) throw new Error('Audio data missing'); ab = await Engine.decode(data); }
+  soundCache.set(key, ab); return ab;
+}
+let previewKey = null;
+function refreshPreviewButtons() { for (const b of $$('[data-prev]')) b.textContent = (Engine.preview && b.dataset.prev === previewKey) ? '■' : '▶'; }
+function renderSounds(body) {
+  const list = allSounds(), cats = ['All', ...new Set(list.map(s => s.category))];
+  if (!cats.includes(state.soundFilter)) state.soundFilter = 'All';
+  const q = state.soundSearch.toLowerCase();
+  const shown = list.filter(s => (state.soundFilter === 'All' || s.category === state.soundFilter) && (!q || (s.name + ' ' + s.source).toLowerCase().includes(q)));
+  const t = trackById(state.selTrack);
+  body.append(
+    h('div', { class: 'row', style: { marginBottom: '8px', flexWrap: 'wrap' } },
+      h('div', { class: 'chips' }, cats.map(c => h('button', { class: state.soundFilter === c ? 'on' : '', 'data-k': 'sc-' + c, onclick: () => { state.soundFilter = c; renderPanel(); } }, c))),
+      h('div', { class: 'grow' }),
+      h('input', { type: 'search', placeholder: 'Search sounds', value: state.soundSearch, 'data-k': 'snd-search', oninput: e => { state.soundSearch = e.target.value; const pos = e.target.selectionStart; renderPanel(); const s = $('[data-k="snd-search"]'); s.focus(); s.setSelectionRange(pos, pos); } }),
+      h('button', { 'data-k': 'snd-import', onclick: async () => { const files = await pickFiles({ accept: 'audio/*,' + AUDIO_EXT.map(e => '.' + e).join(','), multiple: true }); await importAudioFiles(files, true); } }, 'Import audio…')),
+    h('div', { class: 'dim small', style: { margin: '0 0 6px' } }, t ? `Adds at the playhead on "${t.name}".` : 'Adds at the playhead on a new track.'),
+    shown.length ? h('div', null, shown.map((s, i) => {
+      const key = s.key || 'b:' + s.name;
+      return h('div', { class: 'snd' },
+        h('div', { class: 'sw', style: { background: catColor(s.category) } }),
+        h('div', { style: { minWidth: 0 } }, h('div', { style: { fontWeight: 600 } }, s.name), h('div', { class: 'dim small' }, [s.category, s.bpm ? s.bpm + ' BPM' : null, s.source].filter(Boolean).join(' · '))),
+        h('button', { 'data-prev': key, title: 'Preview', 'data-k': 'sp-' + key, onclick: async () => {
+          if (Engine.preview && previewKey === key) { Engine.stopPreview(); refreshPreviewButtons(); return; }
+          try { const b = await soundBuffer(s); previewKey = key; Engine.previewBuffer(b); refreshPreviewButtons(); } catch (e) { toast(s.name + ': ' + e.message, true); }
+        } }, Engine.preview && previewKey === key ? '■' : '▶'),
+        h('button', { class: 'primary', 'data-k': 'sa-' + key, onclick: () => addSound(s) }, '+ Add'));
+    })) : h('div', { class: 'empty' }, 'No sounds match. Install a sound pack on the Plugins page, or import audio.'));
+}
+function catColor(c) { return { Drums: '#FF8A3D', Bass: '#3DA9FF', Keys: '#00D4AA', Synth: '#B07CFF', 'My audio': '#C6E83A' }[c] || '#7C5CFF'; }
+async function addSound(s, at) {
+  const p = P(); let ab;
+  try { ab = await soundBuffer(s); } catch (e) { return toast(`${s.name}: could not decode (${e.message})`, true); }
+  await addBufferClip(ab, s.name, { bpm: s.bpm, at });
+}
+async function addBufferClip(ab, name, { bpm = 0, at, track } = {}) {
+  const p = P(), file = safeName(name).replace(/\s+/g, '-').toLowerCase() + '-' + uid().slice(0, 6) + '.wav';
+  await storeAudio(p.id, file, ab); Engine.setBuffer(file, ab);
+  let tempoSet = false;
+  edit(() => {
+    if (bpm && projectLength(p) === 0 && Math.abs(p.bpm - bpm) > 0.01) { p.bpm = clamp(bpm, 40, 240); tempoSet = true; }
+    let t = track || trackById(state.selTrack);
+    if (!t) { t = addTrack(p); Engine.buildTrack(t); Engine.applyMix(p); }
+    const c = { id: uid(), file, name, start: at ?? state.playhead, offset: 0, length: ab.duration, gain: 1 };
+    t.clips.push(c); state.selTrack = t.id; state.selClip = c.id;
+  });
+  if (tempoSet) toast(`Tempo set to ${bpm} BPM to match the loop`);
+  ensureVisible(state.playhead);
+}
+
+// ---------- timeline ----------
+let tlDirty = true, drag = null;
+function markTimeline() { tlDirty = true; }
+function setupTimeline() {
+  const sc = $('#tlscroll');
+  sc.addEventListener('scroll', () => { $('#headsInner').style.transform = `translateY(${-sc.scrollTop}px)`; markTimeline(); });
+  sc.addEventListener('pointerdown', tlDown);
+  sc.addEventListener('pointermove', tlMove);
+  sc.addEventListener('pointerup', tlUp);
+  sc.addEventListener('pointercancel', tlUp);
+  sc.addEventListener('dblclick', e => { const hit = tlHit(e); if (hit.clip) clipMenu({ x: e.clientX, y: e.clientY }); });
+  sc.addEventListener('contextmenu', e => { e.preventDefault(); const hit = tlHit(e); if (hit.clip) { selectClip(hit.clip.id, hit.track.id); clipMenu({ x: e.clientX, y: e.clientY }); } else if (hit.track) trackMenu({ x: e.clientX, y: e.clientY }, hit.track); });
+  sc.addEventListener('wheel', e => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); const r = sc.getBoundingClientRect(); zoom(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left); } }, { passive: false });
+  sc.addEventListener('keydown', tlKey);
+  new ResizeObserver(() => { sizeTimeline(); }).observe($('#tlview'));
+}
+function sizeTimeline() {
+  const view = $('#tlview'), cv = $('#tlcanvas'); if (!view || !P()) return;
+  const dpr = devicePixelRatio || 1, w = view.clientWidth, hgt = view.clientHeight;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(hgt * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(hgt * dpr); }
+  const beat = 60 / P().bpm, minLen = Math.max(projectLength(P()) + 16 * beat * 4, 32 * beat * 4, Engine.position() + 8 * beat * 4);
+  $('#tlspacer').style.width = Math.max(w, minLen * state.pps) + 'px';
+  $('#tlspacer').style.height = Math.max(hgt, RULER_H + P().tracks.length * ROW_H + 60) + 'px';
+  markTimeline();
+}
+function gridStep() { const beat = 60 / P().bpm; const px = beat * state.pps; return px >= 60 ? beat / 4 : px >= 26 ? beat / 2 : px >= 12 ? beat : beat * 4; }
+const snapT = (t, free) => free ? Math.max(0, t) : Math.max(0, Math.round(t / gridStep()) * gridStep());
+function tlHit(e) {
+  const sc = $('#tlscroll'), r = sc.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  const time = (x + sc.scrollLeft) / state.pps, p = P();
+  if (y < RULER_H) return { ruler: true, time, x, y };
+  const row = Math.floor((y + sc.scrollTop - RULER_H) / ROW_H), track = p.tracks[row];
+  if (!track) return { time, x, y, row };
+  for (let i = track.clips.length - 1; i >= 0; i--) {
+    const c = track.clips[i], x0 = c.start * state.pps - sc.scrollLeft, x1 = (c.start + c.length) * state.pps - sc.scrollLeft;
+    if (x >= x0 && x <= x1) { const edge = Math.min(8, (x1 - x0) / 4); return { clip: c, track, row, time, x, y, edge: x - x0 < edge ? 'L' : x1 - x < edge ? 'R' : null }; }
+  }
+  return { track, row, time, x, y };
+}
+function tlDown(e) {
+  if (e.button !== 0) return;
+  const sc = $('#tlscroll'); sc.focus({ preventScroll: true }); Engine.resume();
+  const hit = tlHit(e);
+  if (hit.ruler || (!hit.clip)) {
+    if (hit.track) { state.selTrack = hit.track.id; }
+    state.selClip = null; state.moveMode = false;
+    seek(Math.max(0, hit.time)); drag = { mode: 'seek' }; sc.setPointerCapture(e.pointerId); renderStudioParts(); return;
+  }
+  selectClip(hit.clip.id, hit.track.id);
+  const c = hit.clip;
+  drag = { mode: hit.edge === 'L' ? 'trimL' : hit.edge === 'R' ? 'trimR' : 'move', clip: c, x0: e.clientX, y0: e.clientY, row0: hit.row, snap: snapshot(), orig: { start: c.start, offset: c.offset, length: c.length }, moved: false, grab: hit.time - c.start };
+  sc.setPointerCapture(e.pointerId);
+}
+function tlMove(e) {
+  const sc = $('#tlscroll');
+  if (!drag) { const hit = tlHit(e); sc.style.cursor = hit.clip ? (hit.edge ? 'ew-resize' : 'grab') : hit.ruler ? 'pointer' : 'default'; return; }
+  const hit = tlHit(e);
+  if (drag.mode === 'seek') { seek(Math.max(0, hit.time)); return; }
+  const c = drag.clip, o = drag.orig, free = e.shiftKey || e.altKey, buf = Engine.buffers.get(c.file), full = buf ? buf.duration : o.offset + o.length;
+  if (Math.abs(e.clientX - drag.x0) < 3 && Math.abs(e.clientY - drag.y0) < 3 && !drag.moved) return;
+  drag.moved = true;
+  if (drag.mode === 'move') {
+    c.start = snapT(hit.time - drag.grab, free);
+    const p = P(), row = clamp(Math.floor((e.clientY - sc.getBoundingClientRect().top + sc.scrollTop - RULER_H) / ROW_H), 0, p.tracks.length - 1), from = clipById(c.id).track, to = p.tracks[row];
+    if (to && to !== from) { from.clips.splice(from.clips.indexOf(c), 1); to.clips.push(c); state.selTrack = to.id; }
+  } else if (drag.mode === 'trimL') {
+    let ns = snapT(hit.time, free); ns = clamp(ns, o.start - o.offset, o.start + o.length - 0.02);
+    c.offset = o.offset + (ns - o.start); c.length = o.length - (ns - o.start); c.start = ns;
+  } else {
+    let ne = snapT(hit.time, free); ne = clamp(ne, o.start + 0.02, o.start + full - o.offset);
+    c.length = ne - o.start;
+  }
+  sc.style.cursor = drag.mode === 'move' ? 'grabbing' : 'ew-resize';
+  markTimeline();
+}
+function tlUp(e) {
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.mode !== 'seek' && d.moved) { pushUndo(d.snap); changed(); }
+  else if (d.mode !== 'seek') renderStudioParts();
+}
+function selectClip(cid, tid) { state.selClip = cid; if (tid) state.selTrack = tid; markTimeline(); renderStudioParts(); }
+function seek(t) {
+  t = Math.max(0, t); state.playhead = t;
+  if (Engine.playing && !state.recording) Engine.play(P(), t);
+  updateClock(); markTimeline(); ensureVisible(t);
+}
+function zoom(f, anchorX) {
+  const sc = $('#tlscroll'); if (!sc) return;
+  const ax = anchorX ?? Math.min(sc.clientWidth / 2, Math.max(0, Engine.position() * state.pps - sc.scrollLeft));
+  const tAt = (sc.scrollLeft + ax) / state.pps;
+  state.pps = clamp(state.pps * f, 6, 900); sizeTimeline();
+  sc.scrollLeft = Math.max(0, tAt * state.pps - ax); markTimeline();
+}
+function ensureVisible(t) {
+  const sc = $('#tlscroll'); if (!sc) return;
+  const x = t * state.pps;
+  if (x < sc.scrollLeft + 20 || x > sc.scrollLeft + sc.clientWidth - 40) { sizeTimeline(); sc.scrollLeft = Math.max(0, x - sc.clientWidth * 0.25); }
+}
+function rr(g, x, y, w, hh, r) { r = Math.min(r, w / 2, hh / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + hh, r); g.arcTo(x + w, y + hh, x, y + hh, r); g.arcTo(x, y + hh, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function drawTimeline() {
+  const cv = $('#tlcanvas'), sc = $('#tlscroll'); if (!cv || !sc || !P()) return;
+  const g = cv.getContext('2d'), dpr = devicePixelRatio || 1, W = cv.width / dpr, H = cv.height / dpr, p = P();
+  const sl = sc.scrollLeft, st = sc.scrollTop, pps = state.pps, beat = 60 / p.bpm, bar = beat * 4;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.fillStyle = '#14141A'; g.fillRect(0, 0, W, H);
+  // lanes
+  p.tracks.forEach((t, i) => {
+    const y = RULER_H + i * ROW_H - st; if (y > H || y + ROW_H < RULER_H) return;
+    g.fillStyle = t.id === state.selTrack ? '#1E1E26' : (i % 2 ? '#17171E' : '#191920'); g.fillRect(0, y, W, ROW_H);
+    g.fillStyle = '#33333F'; g.fillRect(0, y + ROW_H - 1, W, 1);
+  });
+  // grid
+  const step = gridStep(), t0 = Math.floor(sl / pps / step) * step;
+  for (let t = t0; t * pps - sl < W; t += step) {
+    const x = Math.round(t * pps - sl) + 0.5, isBar = Math.abs(t / bar - Math.round(t / bar)) < 1e-6, isBeat = Math.abs(t / beat - Math.round(t / beat)) < 1e-6;
+    g.fillStyle = isBar ? '#3a3a48' : isBeat ? '#26262f' : '#1d1d25'; g.fillRect(x, RULER_H, 1, H);
+  }
+  // clips
+  const sel = state.selClip;
+  p.tracks.forEach((t, i) => {
+    const y = RULER_H + i * ROW_H - st + 4, hh = ROW_H - 9; if (y > H || y + hh < RULER_H) return;
+    for (const c of t.clips) {
+      const x0 = c.start * pps - sl, w = c.length * pps; if (x0 > W || x0 + w < 0) continue;
+      const missing = !Engine.buffers.has(c.file);
+      g.save(); rr(g, x0, y, Math.max(2, w), hh, 6); g.clip();
+      g.fillStyle = missing ? '#3a2228' : t.color + '40'; g.fillRect(x0, y, w, hh);
+      g.fillStyle = t.color + (c.id === sel ? 'ff' : 'cc'); g.fillRect(x0, y, w, 16);
+      g.fillStyle = '#111'; g.font = '600 11px Segoe UI, system-ui, sans-serif'; g.textBaseline = 'middle';
+      const label = (missing ? '⚠ ' : '') + c.name + (Math.abs(c.gain - 1) > 0.01 ? `  ${fmtDb(c.gain)}` : '');
+      g.fillText(label, Math.max(x0, 0) + 6, y + 8);
+      // waveform
+      const pk = Engine.peaks.get(c.file);
+      if (pk) {
+        const mid = y + 16 + (hh - 16) / 2, amp = (hh - 20) / 2 * Math.min(2.5, Math.max(0.3, c.gain)), xs = Math.max(0, Math.floor(x0)), xe = Math.min(W, Math.ceil(x0 + w));
+        g.fillStyle = t.color;
+        const binsPerPx = pk.sr / pk.bin / pps;
+        for (let x = xs; x < xe; x++) {
+          const tt = c.offset + (x - x0) / pps, b0 = Math.floor(tt * pk.sr / pk.bin), b1 = Math.max(b0 + 1, Math.floor(b0 + binsPerPx));
+          let lo = 0, hi = 0; for (let b = b0; b < b1 && b < pk.mn.length; b++) { if (pk.mn[b] < lo) lo = pk.mn[b]; if (pk.mx[b] > hi) hi = pk.mx[b]; }
+          const top = mid - clamp(hi, -1, 1) * amp, bot = mid - clamp(lo, -1, 1) * amp; g.fillRect(x, top, 1, Math.max(1, bot - top));
+        }
+      }
+      g.restore();
+      if (c.id === sel) {
+        g.lineWidth = 2; g.strokeStyle = state.moveMode ? '#00D4AA' : '#fff'; if (state.moveMode) g.setLineDash([6, 4]);
+        rr(g, x0 + 1, y + 1, Math.max(2, w - 2), hh - 2, 6); g.stroke(); g.setLineDash([]);
+      }
+    }
+  });
+  // recording region
+  const pos = Engine.position();
+  if (state.recording) {
+    const i = p.tracks.findIndex(t => t.id === state.recording.trackId);
+    if (i >= 0) { const x0 = state.recording.from * pps - sl, y = RULER_H + i * ROW_H - st + 4; g.fillStyle = '#FF3B5C44'; g.fillRect(x0, y, Math.max(0, (pos - state.recording.from) * pps), ROW_H - 9); }
+  }
+  // ruler
+  g.fillStyle = '#1E1E26'; g.fillRect(0, 0, W, RULER_H); g.fillStyle = '#33333F'; g.fillRect(0, RULER_H - 1, W, 1);
+  g.fillStyle = '#9A9AAE'; g.font = '11px Segoe UI, system-ui, sans-serif'; g.textBaseline = 'top';
+  const barPx = bar * pps, every = barPx >= 60 ? 1 : barPx >= 25 ? 2 : barPx >= 10 ? 4 : 8;
+  for (let b = Math.floor(sl / barPx); b * barPx - sl < W; b++) {
+    const x = Math.round(b * barPx - sl) + 0.5;
+    g.fillStyle = '#4a4a5a'; g.fillRect(x, RULER_H - (b % every ? 6 : 12), 1, b % every ? 6 : 12);
+    if (b % every === 0) { g.fillStyle = '#9A9AAE'; g.fillText(String(b + 1), x + 4, 4); }
+    if (barPx >= 80) for (let k = 1; k < 4; k++) { g.fillStyle = '#3a3a48'; g.fillRect(Math.round(x + k * beat * pps), RULER_H - 5, 1, 5); }
+  }
+  // playhead
+  const px = Math.round(pos * pps - sl) + 0.5;
+  if (px >= -10 && px <= W + 10) {
+    g.fillStyle = state.recording ? '#FF3B5C' : '#fff'; g.fillRect(px - 0.5, 0, 1.5, H);
+    g.beginPath(); g.moveTo(px - 6, 0); g.lineTo(px + 6, 0); g.lineTo(px, 9); g.closePath(); g.fill();
+  }
+  if (!p.tracks.some(t => t.clips.length) && !state.recording) {
+    g.fillStyle = '#9A9AAE'; g.font = '15px Segoe UI, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('Add a loop from Sounds, import audio, or press R to record.', W / 2, RULER_H + Math.min(H - RULER_H, p.tracks.length * ROW_H) / 2 + 2);
+    g.textAlign = 'left';
+  }
+}
+// clip actions
+function selected() { return clipById(state.selClip); }
+function clipMenu(anchor) {
+  const s = selected(); if (!s) return;
+  const { clip: c, track: t } = s, ph = state.playhead, inside = ph > c.start + 0.01 && ph < c.start + c.length - 0.01;
+  showMenu(anchor || canvasAnchor(), [
+    { label: 'Move (D-pad / arrows)', action: () => { state.moveMode = true; markTimeline(); $('#tlscroll').focus(); } },
+    { label: 'Split at playhead', disabled: !inside, action: () => clipOp('split') },
+    { label: 'Trim start to playhead', disabled: !inside, action: () => clipOp('trimStart') },
+    { label: 'Trim end to playhead', disabled: !inside, action: () => clipOp('trimEnd') },
+    { label: 'Duplicate', action: () => clipOp('dup') },
+    { label: 'Louder (+3 dB)', action: () => clipOp('up') },
+    { label: 'Quieter (−3 dB)', action: () => clipOp('down') },
+    { label: 'Rename', action: async () => { const n = await askText('Rename clip', c.name, 'Rename'); if (n) edit(() => c.name = n, { structure: false }); } },
+    '-',
+    { label: 'Delete clip', danger: true, action: () => clipOp('delete') },
+  ]);
+}
+function canvasAnchor() { const sc = $('#tlscroll'), r = sc.getBoundingClientRect(), s = selected(); if (!s) return { x: r.left + 40, y: r.top + 40 }; const i = P().tracks.indexOf(s.track); return { x: clamp(r.left + s.clip.start * state.pps - sc.scrollLeft + 10, r.left, r.right - 220), y: r.top + RULER_H + i * ROW_H - sc.scrollTop + ROW_H - 10 }; }
+function clipOp(op) {
+  const s = selected(); if (!s) return;
+  const { clip: c, track: t } = s, ph = state.playhead;
+  edit(() => {
+    if (op === 'split') { const d = ph - c.start; const r = { ...c, id: uid(), start: ph, offset: c.offset + d, length: c.length - d }; c.length = d; t.clips.push(r); state.selClip = r.id; }
+    else if (op === 'trimStart') { const d = ph - c.start; c.offset += d; c.length -= d; c.start = ph; }
+    else if (op === 'trimEnd') c.length = ph - c.start;
+    else if (op === 'dup') { const r = { ...c, id: uid(), start: c.start + c.length }; t.clips.push(r); state.selClip = r.id; }
+    else if (op === 'up') c.gain = clamp(c.gain * dbToGain(3), 0.05, 8);
+    else if (op === 'down') c.gain = clamp(c.gain * dbToGain(-3), 0.05, 8);
+    else if (op === 'delete') { t.clips.splice(t.clips.indexOf(c), 1); state.selClip = null; state.moveMode = false; }
+  });
+}
+function nudgeClip(dx, dy) {
+  const s = selected(); if (!s) return; const { clip: c, track: t } = s, p = P(), beat = 60 / p.bpm;
+  edit(() => {
+    if (dx) c.start = Math.max(0, Math.round((c.start + dx * beat) / beat * 4) / 4 * beat);
+    if (dy) { const i = clamp(p.tracks.indexOf(t) + dy, 0, p.tracks.length - 1), to = p.tracks[i]; if (to !== t) { t.clips.splice(t.clips.indexOf(c), 1); to.clips.push(c); state.selTrack = to.id; } }
+  });
+  ensureVisible(c.start);
+}
+function tlKey(e) {
+  const p = P(); if (!p) return;
+  const k = e.key;
+  if (state.moveMode) {
+    const m = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[k];
+    if (m) { e.preventDefault(); nudgeClip(...m); return; }
+    if (k === 'Enter' || k === 'Escape' || k === ' ') { e.preventDefault(); e.stopPropagation(); state.moveMode = false; markTimeline(); return; }
+  }
+  if (k === 'ArrowLeft' || k === 'ArrowRight') {
+    e.preventDefault(); const t = trackById(state.selTrack) || p.tracks[0]; if (!t) return;
+    const clips = [...t.clips].sort((a, b) => a.start - b.start);
+    const cur = selected();
+    let next;
+    if (cur && cur.track === t) { const i = clips.indexOf(cur.clip); next = clips[i + (k === 'ArrowRight' ? 1 : -1)]; }
+    else next = k === 'ArrowRight' ? clips.find(c => c.start + c.length > state.playhead) : [...clips].reverse().find(c => c.start < state.playhead);
+    if (next) { selectClip(next.id, t.id); ensureVisible(next.start); }
+    else { seek(state.playhead + (k === 'ArrowRight' ? 1 : -1) * 60 / p.bpm); }
+  } else if (k === 'ArrowUp' || k === 'ArrowDown') {
+    const i = p.tracks.findIndex(t => t.id === state.selTrack), j = i + (k === 'ArrowDown' ? 1 : -1);
+    if (j < 0 || j >= p.tracks.length) return; // let spatial nav leave the timeline
+    e.preventDefault();
+    const t = p.tracks[j], near = t.clips.find(c => c.start <= state.playhead && c.start + c.length > state.playhead);
+    state.selTrack = t.id; state.selClip = near ? near.id : null; renderStudioParts(); markTimeline();
+    const sc = $('#tlscroll'), y = RULER_H + j * ROW_H; if (y < sc.scrollTop + RULER_H || y + ROW_H > sc.scrollTop + sc.clientHeight) sc.scrollTop = y - RULER_H - 10;
+  } else if (k === 'Enter') {
+    e.preventDefault(); if (selected()) { state.moveMode = true; markTimeline(); toast('Move mode: arrows move the clip, Enter/B to finish'); }
+  }
+}
+
+// ---------- transport actions ----------
+function togglePlay() {
+  const p = P(); if (!p) return;
+  if (state.recording) { stopRecording(); return; }
+  if (Engine.playing) { state.playhead = Engine.stop(); }
+  else Engine.play(p, state.playhead);
+  renderTransport(); markTimeline();
+}
+function toggleRecord() { state.recording ? stopRecording() : startRecording(); }
+async function startRecording() {
+  const p = P(); if (!p) return;
+  let t = p.tracks.find(x => x.armed) || trackById(state.selTrack);
+  if (!t) { edit(() => { t = addTrack(p); Engine.buildTrack(t); }); }
+  for (const x of p.tracks) x.armed = x === t; state.selTrack = t.id;
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') return toast('Recording is not supported in this browser.', true);
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
+  catch (e) { return toast('Microphone not available: ' + (e.message || e.name), true); }
+  await Engine.resume();
+  const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'].find(m => MediaRecorder.isTypeSupported?.(m));
+  const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined), chunks = [];
+  const r = { rec, stream, chunks, trackId: t.id, from: Engine.playing ? Engine.position() : state.playhead, ctxStart: null };
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.onstart = () => { r.ctxStart = Engine.ctx.currentTime; };
+  rec.onstop = () => finishRecording(r);
+  if (Engine.stopPreview(), !Engine.playing) Engine.play(p, state.playhead);
+  rec.start(250);
+  state.recording = r; renderStudioParts(); markTimeline();
+}
+function stopRecording() {
+  const r = state.recording; if (!r) return;
+  state.recording = null;
+  try { r.rec.stop(); } catch { }
+  state.playhead = Engine.stop();
+  r.stream.getTracks().forEach(x => x.stop());
+  renderStudioParts(); markTimeline();
+}
+async function finishRecording(r) {
+  try {
+    const blob = new Blob(r.chunks, { type: r.rec.mimeType || 'audio/webm' });
+    if (!blob.size) return toast('Nothing was recorded.', true);
+    let ab = await Engine.decode(await blob.arrayBuffer());
+    const lat = (Engine.ctx.outputLatency || 0) + (Engine.ctx.baseLatency || 0);
+    let start = (r.ctxStart != null ? Engine.posAt(r.ctxStart) : r.from) - lat, skip = 0;
+    if (start < 0) { skip = -start; start = 0; }
+    const t = trackById(r.trackId); if (!P() || !t) return;
+    const n = P().tracks.filter(x => x.clips.some(c => c.name.startsWith('Take'))).length;
+    await addBufferClip(ab, `Take ${t.clips.filter(c => c.name.startsWith('Take')).length + 1}`, { at: start, track: t });
+    if (skip > 0) { const c = selected()?.clip; if (c) { c.offset = skip; c.length = Math.max(0.01, c.length - skip); markTimeline(); } }
+    toast('Recording added to ' + t.name);
+  } catch (e) { toast('Could not use the recording: ' + e.message, true); }
+}
+async function exportMix() {
+  const p = P(); if (!p) return;
+  if (projectLength(p) <= 0) return toast('Add some audio before exporting.', true);
+  const btn = $('[data-k="tp-export"]'); if (btn) btn.disabled = true;
+  try {
+    toast('Rendering mixdown…');
+    const out = await Engine.render(p, f => { if (btn) btn.textContent = `⤓ ${Math.round(f * 100)}%`; });
+    download(encodeWav([out.getChannelData(0), out.getChannelData(1)], out.sampleRate), safeName(p.name) + '.wav');
+    toast(`Exported ${safeName(p.name)}.wav (${fmtTime(out.duration)})`);
+  } catch (e) { toast('Export failed: ' + e.message, true); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = '⤓ Export'; } }
+}
+
+// ---------- Plugins page ----------
+async function renderPlugins() {
+  const main = $('#main'), page = h('div', { class: 'page' }); main.append(page);
+  const inst = [...Plugins.installed.values()].sort((a, b) => a.def.name.localeCompare(b.def.name));
+  const drop = h('div', { class: 'drop' }, 'Drop .yplug, .zip or plugin.json files here');
+  dropZone(drop, files => installPluginFiles(files));
+  page.append(
+    h('div', { class: 'row' }, h('div', { class: 'grow' }, h('h1', null, 'Plugins'), h('div', { class: 'dim' }, 'Effects and sound packs in the Yursic plugin format (same .yplug files as the Xbox app).')),
+      h('button', { 'data-k': 'pl-examples', onclick: installExamples }, 'Install examples'),
+      h('button', { 'data-k': 'pl-folder', onclick: async () => installFolder(await pickFiles({ folder: true })) }, 'Install folder…'),
+      h('button', { class: 'primary', 'data-k': 'pl-install', onclick: async () => installPluginFiles(await pickFiles({ accept: '.yplug,.zip,.json', multiple: true })) }, 'Install plugin…')),
+    drop,
+    h('h2', null, `Installed (${inst.length})`),
+    inst.length ? h('div', { class: 'list' }, inst.map(({ def: d, installed }) => h('div', { class: 'item' },
+      h('div', { class: 'grow' }, h('div', { class: 'name' }, d.name, h('span', { class: 'dim small' }, d.version ? '  v' + d.version : '')),
+        h('div', { class: 'dim small' }, [d.chain.length ? 'Effect' : null, d.sounds.length ? `${d.sounds.length} sound${d.sounds.length > 1 ? 's' : ''}` : null, d.category, d.author && 'by ' + d.author, d.id].filter(Boolean).join(' · ')),
+        d.description && h('div', { class: 'small' }, d.description)),
+      h('button', { class: 'danger', 'data-k': 'pl-rm-' + d.id, onclick: async () => { if (await confirmBox(`Remove "${d.name}"?`, 'Tracks using it will pass audio through until you reinstall it.', 'Remove')) { await Plugins.remove(d.id); soundCache.clear(); go('plugins'); } } }, 'Remove')))) :
+      h('div', { class: 'empty' }, 'No plugins installed yet. Try "Install examples", or see docs/PLUGIN_FORMAT.md to make your own.'),
+    h('h2', null, 'Built-in effects'),
+    h('div', { class: 'cards' }, BUILTIN_FX.map(d => h('div', { class: 'card' }, h('div', { class: 'title' }, d.name), h('div', { class: 'dim small' }, d.category + ' · ' + d.params.map(p => p.name).join(', '))))));
+}
+function dropZone(el, onFiles) {
+  el.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); el.classList.add('over'); });
+  el.addEventListener('dragleave', () => el.classList.remove('over'));
+  el.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); el.classList.remove('over'); onFiles([...e.dataTransfer.files]); });
+}
+async function installPluginFiles(files) {
+  let ok = 0;
+  for (const f of files) {
+    try { const r = await Plugins.installFile(f); ok++; toast(`${r.replaced ? 'Updated' : 'Installed'} ${r.def.name}`); }
+    catch (e) { toast(e.message, true); }
+  }
+  if (ok) { soundCache.clear(); if (state.page === 'plugins') go('plugins'); else if (state.page === 'studio') renderPanel(); }
+}
+async function installFolder(files) {
+  if (!files.length) return;
+  const map = new Map();
+  for (const f of files) map.set((f.webkitRelativePath || f.name).replace(/\\/g, '/'), await f.arrayBuffer());
+  try { const r = await Plugins.install(map, files[0].webkitRelativePath?.split('/')[0] || 'folder'); toast(`${r.replaced ? 'Updated' : 'Installed'} ${r.def.name}`); soundCache.clear(); go('plugins'); }
+  catch (e) { toast(e.message, true); }
+}
+const EXAMPLES = { 'space-echo': [], 'vocal-chain': [], 'starter-drums': ['loops/house-loop-124.wav'] };
+async function installExamples() {
+  let n = 0;
+  for (const [name, extra] of Object.entries(EXAMPLES)) {
+    try {
+      const map = new Map(), base = `examples/${name}/`;
+      for (const f of ['plugin.json', ...extra]) { const r = await fetch(base + f); if (!r.ok) throw new Error(`${base + f}: HTTP ${r.status}`); map.set(f, await r.arrayBuffer()); }
+      await Plugins.install(map, name); n++;
+    } catch (e) { toast(`Could not get example "${name}" (${e.message})`, true); }
+  }
+  if (n) { toast(`Installed ${n} example plugin${n > 1 ? 's' : ''}`); soundCache.clear(); go('plugins'); }
+}
+
+// ---------- Files page ----------
+async function renderFiles() {
+  const main = $('#main'), page = h('div', { class: 'page' }); main.append(page);
+  await refreshLibrary();
+  let est = null; try { est = await navigator.storage?.estimate?.(); } catch { }
+  let persisted = false; try { persisted = await navigator.storage?.persisted?.(); } catch { }
+  if (state.page !== 'files') return;
+  const drop = h('div', { class: 'drop' }, 'Drop audio files (WAV, MP3, M4A, FLAC, OGG…) or .yproj / .yplug files here');
+  dropZone(drop, handleDroppedFiles);
+  const total = libraryCache.reduce((a, b) => a + (b.size || 0), 0);
+  page.append(
+    h('div', { class: 'row' }, h('div', { class: 'grow' }, h('h1', null, 'Files'), h('div', { class: 'dim' }, 'Your audio library and project backups. Everything stays in this browser until you export it.'))),
+    h('h2', null, 'Storage'),
+    h('div', { class: 'item' },
+      h('div', { class: 'grow' },
+        est ? [h('div', null, `${fmtSize(est.usage || 0)} used of ${fmtSize(est.quota || 0)} available to this site`), h('div', { class: 'meterbar', style: { marginTop: '6px' } }, h('div', { style: { width: Math.min(100, (est.usage || 0) / (est.quota || 1) * 100) + '%' } }))] : h('div', null, 'Storage size unavailable in this browser.'),
+        h('div', { class: 'dim small', style: { marginTop: '6px' } }, DB.db ? (persisted ? 'Storage is persistent: the browser won\'t clear it on its own.' : 'The browser may clear site data when space runs low. Back up important projects.') : 'This browser blocked local storage, so work is lost when you close the tab. Export your projects!')),
+      !persisted && navigator.storage?.persist ? h('button', { 'data-k': 'fs-persist', onclick: async () => { const ok = await navigator.storage.persist(); toast(ok ? 'Storage is now persistent' : 'The browser declined. Try again after using the app for a while.', !ok); go('files'); } }, 'Keep my data') : null),
+    h('h2', null, `Audio library (${libraryCache.length}${total ? ' · ' + fmtSize(total) : ''})`),
+    h('div', { class: 'row' }, h('div', { class: 'dim grow' }, 'Imported audio shows up in the studio under Sounds → My audio.'),
+      h('button', { class: 'primary', 'data-k': 'fs-import', onclick: async () => { await importAudioFiles(await pickFiles({ accept: 'audio/*,' + AUDIO_EXT.map(e => '.' + e).join(','), multiple: true })); go('files'); } }, 'Import audio…')),
+    drop,
+    libraryCache.length ? h('div', { class: 'list', style: { marginTop: '10px' } }, libraryCache.map(it => h('div', { class: 'item' },
+      h('div', { class: 'grow' }, h('div', { class: 'name' }, it.name), h('div', { class: 'dim small' }, fmtSize(it.size || 0) + ' · added ' + fmtDate(it.added))),
+      h('button', { 'data-k': 'fs-pv-' + it.id, onclick: async () => { try { const r = await DB.get('library', it.id); Engine.previewBuffer(await Engine.decode(r.data)); } catch (e) { toast('Cannot play this file: ' + e.message, true); } } }, '▶'),
+      h('button', { 'data-k': 'fs-st-' + it.id, onclick: () => Engine.stopPreview() }, '■'),
+      h('button', { class: 'danger', 'data-k': 'fs-rm-' + it.id, onclick: async () => { if (await confirmBox(`Delete "${it.name}"?`, 'Clips already in projects keep their own copy.')) { await DB.del('library', it.id); go('files'); } } }, 'Delete')))) : '',
+    h('h2', null, 'Project backups'),
+    h('div', { class: 'row' }, h('div', { class: 'dim grow' }, '.yproj files hold a whole project with its audio. They open in the Xbox app too.'),
+      h('button', { 'data-k': 'fs-impp', onclick: importProjectFlow }, 'Import .yproj'),
+      h('button', { 'data-k': 'fs-expall', onclick: async () => { const ps = await listProjects(); if (!ps.length) return toast('No projects yet'); for (const f of ps) await exportProject(f); } }, 'Export all projects')));
+}
+async function importAudioFiles(files, addToStudio) {
+  let n = 0;
+  for (const f of files) {
+    if (!AUDIO_EXT.includes(ext(f.name)) && !f.type.startsWith('audio/')) { toast(f.name + ': not an audio file', true); continue; }
+    try {
+      const data = await f.arrayBuffer();
+      if (addToStudio && P()) { const ab = await Engine.decode(data); await addBufferClip(ab, f.name.replace(/\.[^.]+$/, '')); }
+      await DB.put('library', uid(), { name: f.name, size: f.size, type: f.type, added: new Date().toISOString(), data }); n++;
+    } catch (e) { toast(`${f.name}: could not decode (${e.message || 'unsupported format'})`, true); }
+  }
+  await refreshLibrary();
+  if (n) toast(`Imported ${n} file${n > 1 ? 's' : ''}`);
+  if (state.page === 'studio') renderPanel();
+}
+async function handleDroppedFiles(files) {
+  const plug = files.filter(f => ['yplug', 'zip'].includes(ext(f.name)) || f.name.toLowerCase() === 'plugin.json');
+  const proj = files.filter(f => ext(f.name) === 'yproj');
+  const audio = files.filter(f => AUDIO_EXT.includes(ext(f.name)) || f.type.startsWith('audio/'));
+  if (plug.length) await installPluginFiles(plug);
+  for (const f of proj) await importProject(f);
+  if (audio.length) await importAudioFiles(audio, state.page === 'studio');
+  if (state.page === 'files') go('files');
+}
+document.addEventListener('dragover', e => { if (e.dataTransfer?.types?.includes('Files')) e.preventDefault(); });
+document.addEventListener('drop', e => { if (!e.dataTransfer?.files?.length) return; e.preventDefault(); handleDroppedFiles([...e.dataTransfer.files]); });
+
+// ---------- keyboard ----------
+document.addEventListener('keydown', e => {
+  const typing = e.target.matches?.('input[type=text],input[type=search],input[type=number],textarea,select');
+  if (e.key === 'Escape') { if (closeMenu(true)) return; const mb = $('#modalBack'); if (mb) { mb._close(null); return; } }
+  if ($('#modalBack') || typing) return;
+  if ($('#menu')) { if (['ArrowDown', 'ArrowUp'].includes(e.key)) { e.preventDefault(); const bs = $$('#menu button:not(:disabled)'), i = bs.indexOf(document.activeElement); bs[(i + (e.key === 'ArrowDown' ? 1 : bs.length - 1)) % bs.length]?.focus(); } return; }
+  if (state.page !== 'studio' || !P()) return;
+  const k = e.key, ctrl = e.ctrlKey || e.metaKey, onRange = e.target.matches?.('input[type=range]');
+  if (ctrl && k.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if (ctrl && k.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
+  if (ctrl && k.toLowerCase() === 's') { e.preventDefault(); state.dirty = true; saveProject().then(() => toast('Saved')); return; }
+  if (ctrl) return;
+  if (k === ' ' && !e.target.matches('button')) { e.preventDefault(); togglePlay(); }
+  else if (k === 'r' || k === 'R') { e.preventDefault(); toggleRecord(); }
+  else if (k === 'PageUp' || k === 'PageDown') { e.preventDefault(); jumpBar(k === 'PageDown' ? 1 : -1); }
+  else if (k === '+' || k === '=') { e.preventDefault(); zoom(1.4); }
+  else if (k === '-' || k === '_') { e.preventDefault(); zoom(1 / 1.4); }
+  else if (k === 'Home' && !onRange) { e.preventDefault(); seek(0); }
+  else if ((k === 'Delete' || k === 'Backspace') && selected() && !onRange) { e.preventDefault(); clipOp('delete'); }
+  else if ((k === 'm' || k === 'M' || k === 'ContextMenu') && selected()) { e.preventDefault(); clipMenu(); }
+});
+function jumpBar(d) { const p = P(), bar = 240 / p.bpm, pos = Engine.position(); seek(d > 0 ? (Math.floor(pos / bar + 1e-6) + 1) * bar : Math.max(0, (Math.ceil(pos / bar - 1e-6) - 1) * bar)); }
+
+// ---------- game controller ----------
+const Pad = { prev: [], repeat: {}, active: false };
+if ('gamepadInputEmulation' in navigator) try { navigator.gamepadInputEmulation = 'gamepad'; } catch { }
+function padLoop() {
+  const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
+  const gp = pads.find(p => p.buttons.some(b => b.pressed)) || pads[0];
+  if (gp) {
+    const now = performance.now();
+    const pressed = gp.buttons.map(b => b.pressed || b.value > 0.5);
+    const ax = gp.axes || [];
+    pressed[12] = pressed[12] || ax[1] < -0.6; pressed[13] = pressed[13] || ax[1] > 0.6; pressed[14] = pressed[14] || ax[0] < -0.6; pressed[15] = pressed[15] || ax[0] > 0.6;
+    pressed.forEach((on, i) => {
+      const was = Pad.prev[i];
+      if (on && !was) { Pad.repeat[i] = now + 380; padButton(i); }
+      else if (on && was && [12, 13, 14, 15, 6, 7].includes(i) && now >= Pad.repeat[i]) { Pad.repeat[i] = now + (i >= 12 ? 90 : 160); padButton(i); }
+    });
+    Pad.prev = pressed;
+  }
+  requestAnimationFrame(padLoop);
+}
+function padButton(i) {
+  if (!Pad.active) { Pad.active = true; document.body.classList.add('gamepad'); }
+  const ae = document.activeElement, inStudio = state.page === 'studio' && P(), modalOpen = $('#modalBack'), menuOpen = $('#menu');
+  const dir = { 12: 'up', 13: 'down', 14: 'left', 15: 'right' }[i];
+  if (dir) {
+    if (ae && ae.matches?.('input[type=range]') && (dir === 'left' || dir === 'right') && !menuOpen) {
+      const r = ae, span = (+r.max - +r.min), stepv = r.step && r.step !== 'any' ? +r.step : span / 100, inc = Math.max(stepv, span / 50);
+      r.dispatchEvent(new Event('pointerdown')); r.value = clamp(+r.value + (dir === 'right' ? inc : -inc), +r.min, +r.max);
+      r.dispatchEvent(new Event('input', { bubbles: true })); r.dispatchEvent(new Event('change', { bubbles: true })); return;
+    }
+    if (ae && ae.id === 'tlscroll' && inStudio && !menuOpen && !modalOpen) {
+      const key = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' }[dir];
+      const ev = new KeyboardEvent('keydown', { key, cancelable: true, bubbles: true }); ae.dispatchEvent(ev);
+      if (ev.defaultPrevented) return;
+    }
+    spatialNav(dir); return;
+  }
+  switch (i) {
+    case 0: // A
+      if (ae && ae.id === 'tlscroll' && inStudio) { if (state.moveMode) { state.moveMode = false; markTimeline(); } else if (selected()) { state.moveMode = true; markTimeline(); toast('Move mode: D-pad moves the clip, A/B to finish'); } else togglePlay(); return; }
+      if (ae && ae !== document.body) { if (ae.matches('select')) { ae.size = Math.min(10, ae.options.length); ae.addEventListener('change', () => ae.size = 0, { once: true }); ae.addEventListener('blur', () => ae.size = 0, { once: true }); } else ae.click(); }
+      else focusFirst();
+      return;
+    case 1: // B
+      if (menuOpen) { closeMenu(true); return; }
+      if (modalOpen) { modalOpen._close(null); return; }
+      if (ae && ae.matches?.('select') && ae.size > 1) { ae.size = 0; return; }
+      if (state.moveMode) { state.moveMode = false; markTimeline(); return; }
+      if (inStudio) { if (state.selClip) { state.selClip = null; markTimeline(); return; } go('home'); return; }
+      if (state.page !== 'home') go('home');
+      return;
+  }
+  if (modalOpen || menuOpen) return;
+  if (!inStudio) { if (i === 9 && ae?._menu) ae._menu(); return; }
+  switch (i) {
+    case 2: togglePlay(); break;           // X
+    case 3: toggleRecord(); break;         // Y
+    case 4: jumpBar(-1); break;            // LB
+    case 5: jumpBar(1); break;             // RB
+    case 6: zoom(1 / 1.25); break;         // LT
+    case 7: zoom(1.25); break;             // RT
+    case 8: cyclePanel(); break;           // View
+    case 9: if (selected()) clipMenu(); else { const t = trackById(state.selTrack); if (t) trackMenu($(`[data-k="tn-${t.id}"]`), t); } break; // Menu
+  }
+}
+function focusables() {
+  const root = $('#modalBack') || $('#menu') || document;
+  return $$('button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex="0"]', root).filter(el => { if (el.type === 'file') return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth; });
+}
+function focusFirst() { const f = focusables()[0]; f && f.focus(); }
+function spatialNav(dir) {
+  const cands = focusables(), ae = document.activeElement;
+  if (!ae || ae === document.body || !cands.includes(ae)) return focusFirst();
+  const a = ae.getBoundingClientRect(), ac = { x: a.left + a.width / 2, y: a.top + a.height / 2 };
+  let best = null, bestScore = Infinity;
+  for (const el of cands) {
+    if (el === ae || ae.contains(el)) continue;
+    const r = el.getBoundingClientRect(), c = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    let main, cross;
+    if (dir === 'left') { main = a.left - r.right; cross = Math.abs(c.y - ac.y); if (c.x >= ac.x - 1) continue; }
+    if (dir === 'right') { main = r.left - a.right; cross = Math.abs(c.y - ac.y); if (c.x <= ac.x + 1) continue; }
+    if (dir === 'up') { main = a.top - r.bottom; cross = Math.abs(c.x - ac.x); if (c.y >= ac.y - 1) continue; }
+    if (dir === 'down') { main = r.top - a.bottom; cross = Math.abs(c.x - ac.x); if (c.y <= ac.y + 1) continue; }
+    const overlap = dir === 'left' || dir === 'right' ? (r.top < a.bottom && r.bottom > a.top) : (r.left < a.right && r.right > a.left);
+    const score = Math.max(0, main) + cross * (overlap ? 0.5 : 2.5);
+    if (score < bestScore) { bestScore = score; best = el; }
+  }
+  if (best) { best.focus(); best.scrollIntoView?.({ block: 'nearest', inline: 'nearest' }); }
+}
+document.addEventListener('mousedown', () => { if (Pad.active) { Pad.active = false; document.body.classList.remove('gamepad'); } });
+
+// ---------- animation loop ----------
+function frame() {
+  if (state.page === 'studio' && P()) {
+    if (Engine.playing) {
+      const pos = Engine.position(); updateClock(); markTimeline();
+      const sc = $('#tlscroll'); if (sc && !drag) { const x = pos * state.pps; if (x > sc.scrollLeft + sc.clientWidth - 60) { sizeTimeline(); sc.scrollLeft = x - 80; } }
+    }
+    if (tlDirty) { tlDirty = false; drawTimeline(); }
+    for (const t of P().tracks) {
+      const n = Engine.tracks.get(t.id); if (!n) continue;
+      let v = Engine.level(n.an); n._m = v > (n._m || 0) ? v : (n._m || 0) * 0.88;
+      const pct = Math.min(100, n._m * 100) + '%';
+      const hm = document.querySelector(`[data-meter="${t.id}"]`); if (hm) hm.style.width = pct;
+      const vm = document.querySelector(`[data-vmeter="${t.id}"]`); if (vm) vm.style.height = pct;
+    }
+    const mv = Engine.level(Engine.masterAn); Engine._mm = mv > (Engine._mm || 0) ? mv : (Engine._mm || 0) * 0.88;
+    const mm = $('#masterMeter'); if (mm) mm.style.width = Math.min(100, Engine._mm * 100) + '%';
+    const vmm = document.querySelector('[data-vmeter="master"]'); if (vmm) vmm.style.height = Math.min(100, Engine._mm * 100) + '%';
+  }
+  requestAnimationFrame(frame);
+}
+
+// ---------- start ----------
+(async function start() {
+  await DB.open();
+  await Engine.init();
+  await Plugins.load();
+  await refreshLibrary();
+  const unlock = () => Engine.resume();
+  document.addEventListener('pointerdown', unlock); document.addEventListener('keydown', unlock);
+  window.addEventListener('gamepadconnected', e => { toast('Controller connected: ' + (e.gamepad.id.split('(')[0].trim() || 'gamepad')); Engine.resume(); });
+  $('#navinfo').textContent = DB.db ? '' : 'Storage blocked: export your work';
+  go('home');
+  requestAnimationFrame(frame); requestAnimationFrame(padLoop);
+  window.Yursic = { state, Engine, Plugins, DB, openProject, addSound, BUILTIN_SOUNDS, clipOp, exportMix, undo, redo, newProject, toFile }; // for testing / console
+})();
+</script>
+</body>
+</html>
